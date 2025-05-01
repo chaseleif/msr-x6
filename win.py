@@ -179,9 +179,6 @@ class SYTMembers(tk.Tk):
                     column=0, columnspan=2, pady=10)
     self.eval('tk::PlaceWindow . center')
 
-  def makecard(self):
-    print('hallo makecard')
-
   def save_member(self, member):
     modified = {}
     for field in member:

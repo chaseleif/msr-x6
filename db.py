@@ -10,7 +10,7 @@ class DataBase:
     self.memberdb = memberdb
     with sqlite3.connect(memberdb) as conn:
       curs = conn.cursor()
-      curs.execute('PRAGMA table_info(members)')
+      curs.execute('PRAGMA table_info(members);')
       schema = curs.fetchall()
     self.memberprotected = tuple(col[1] for col in schema if col[3] == 1)
     self.memberfieldtypes = {col[1]:col[2] for col in schema}
@@ -18,7 +18,7 @@ class DataBase:
     self.trxndb = trxndb
     with sqlite3.connect(trxndb) as conn:
       curs = conn.cursor()
-      curs.execute('PRAGMA table_info(transactions)')
+      curs.execute('PRAGMA table_info(transactions);')
       schema = curs.fetchall()
     self.trxndefaults = {col[1]:col[4] for col in schema}
 
@@ -29,7 +29,7 @@ class DataBase:
       member = curs.fetchall()
       if len(member) == 0:
         return None
-      curs.execute('PRAGMA table_info(members)')
+      curs.execute('PRAGMA table_info(members);')
       schema = curs.fetchall()
     member = {field[1]:value for field,value in zip(schema,member[0])}
     return member
@@ -62,7 +62,7 @@ class DataBase:
       if field in ('Member ID','Name','Activation') or member[field] == '':
         continue
       cmd += f',"{member[field]}"'
-    cmd += ')'
+    cmd += ');'
     with sqlite3.connect(self.memberdb) as conn:
       curs = conn.cursor()
       curs.execute(cmd)
@@ -72,7 +72,7 @@ class DataBase:
   def deletemember(self, member):
     with sqlite3.connect(self.memberdb) as conn:
       curs = conn.cursor()
-      curs.execute(f'DELETE FROM members WHERE "Member ID"={member}')
+      curs.execute(f'DELETE FROM members WHERE "Member ID"={member};')
       conn.commit()
 
   def editmember(self, memberid, modified):
@@ -98,7 +98,7 @@ class DataBase:
   def startofday(self):
     now = localtime(time())
     now = ( now.tm_year, now.tm_mon,
-            mow.tm_mday-1 if now.tm_hour < 2 else now.tm_mday,
+            now.tm_mday-1 if now.tm_hour < 3 else now.tm_mday,
             0, 0, 0, 0, 0, -1)
     now = mktime(struct_time(now))
     return round(now)
@@ -151,6 +151,6 @@ class DataBase:
         cmd += f', "Total spent"="Total spent"+{transaction["Total spent"]}'
       if float(transaction['Total hours']) > 0:
         cmd += f', "Total hours"="Total hours"+{transaction["Total hours"]}'
-      cmd += f' WHERE "Member ID"={memberid}'
+      cmd += f' WHERE "Member ID"={memberid};'
       curs.execute(cmd)
       conn.commit()
