@@ -1,0 +1,19 @@
+CREATE TABLE members (
+  "Member ID" INTEGER NOT NULL PRIMARY KEY,
+  "Name" TEXT NOT NULL,
+  "Activation" INTEGER NOT NULL,
+  "Cards issued" INTEGER DEFAULT 0,
+  "Active" INTEGER DEFAULT 1,
+  "Member level" INTEGER DEFAULT 0,
+  "Phone number" INTEGER,
+  "Zip code" INTEGER,
+  "Birthday" TEXT,
+  "Transactions" INTEGER DEFAULT 0,
+  "Days" INTEGER DEFAULT 0,
+  "Last day" INTEGER DEFAULT 0,
+  "Last league day" INTEGER DEFAULT 0,
+  "League days" INTEGER DEFAULT 0,
+  "Total spent" REAL DEFAULT 0,
+  "Total hours" REAL DEFAULT 0,
+  "Reward balance" REAL DEFAULT 0
+)
