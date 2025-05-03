@@ -22,6 +22,13 @@ class DataBase:
       schema = curs.fetchall()
     self.trxndefaults = {col[1]:col[4] for col in schema}
 
+  def findmember(self, query):
+    with sqlite3.connect(self.memberdb) as conn:
+      curs = conn.cursor()
+      curs.execute(f'SELECT * FROM members WHERE "Name" LIKE "%{query}%"')
+      results = curs.fetchall()
+    return results
+
   def getmember(self, memberid):
     with sqlite3.connect(self.memberdb) as conn:
       curs = conn.cursor()

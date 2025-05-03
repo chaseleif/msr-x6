@@ -27,7 +27,8 @@ class SYTMembers(tk.Tk):
                   'trxnframe',
                   'swipeframe',
                   'findframe',
-                  'memberframe',
+                  'findmemberframe',
+                  'editmemberframe',
                   'newmemberframe'):
       blankframe = tk.Frame(self,
                             width=SYTMembers.width,
@@ -64,7 +65,7 @@ class SYTMembers(tk.Tk):
     self.db.trxn(self.fields)
     self.paint_trxn(self.member, msg='Transactions updated')
 
-  def windowtitle(self, frame, columnspan=1):
+  def windowtitle(self, frame):
     titleframe = tk.Frame(frame,
                           width=SYTMembers.width,
                           height=SYTMembers.height,
@@ -74,24 +75,107 @@ class SYTMembers(tk.Tk):
                       bg=SYTMembers.rgb_bg,
                       fg='black',
                       font=(SYTMembers.font_regular, 18))
-    title.grid(row=0, column=0, columnspan=columnspan, pady=20)
-    titleframe.grid(row=0, column=0, columnspan=columnspan)
-    return titleframe
+    return titleframe, title
 
-  def raisewithtitle(self, frame, columns=1):
+  def raisetitlegrid(self, frame, columns=1):
     self.clear_widgets()
     frame.tkraise()
     for column in range(columns):
       frame.columnconfigure(column, weight=1)
     frame.grid_propagate(False)
-    return self.windowtitle(frame, columnspan=columns)
+    titleframe, title = self.windowtitle(frame)
+    title.grid(row=0, column=0, columnspan=columns, pady=20)
+    titleframe.grid(row=0, column=0, columnspan=columns)
+    return titleframe
 
-  def paint_lookup(self):
-    print('hallo lookup member')
+  def raisetitlepack(self, frame):
+    self.clear_widgets()
+    frame.tkraise()
+    frame.pack_propagate(False)
+    titleframe, title = self.windowtitle(frame)
+    title.pack()
+    titleframe.pack()
+    return titleframe
+
+  def paint_find(self, query=None):
+    titleframe = self.raisetitlepack(self.findmemberframe)
+    leftframe = tk.Frame( self.findmemberframe,
+                          width=SYTMembers.width/2,
+                          height=SYTMembers.height,
+                          bg=SYTMembers.rgb_bg)
+    leftframe.pack()
+    rightframe = tk.Frame(self.findmemberframe,
+                          width=SYTMembers.width/2,
+                          height=SYTMembers.height,
+                          bg=SYTMembers.rgb_bg)
+    rightframe.pack()
+    tk.Label( leftframe,
+              text='Name',
+              bg=SYTMembers.rgb_bg,
+              fg='black',
+              font=(SYTMembers.font_regular, 16)).pack()
+    name = tk.StringVar(rightframe)
+    tk.Entry( rightframe,
+              textvariable=name,
+              bg=SYTMembers.rgb_bg,
+              fg='black',
+              font=(SYTMembers.font_regular, 15)).pack()
+    botframe = tk.Frame(self.findmemberframe,
+                        width=SYTMembers.width,
+                        height=SYTMembers.height,
+                        bg=SYTMembers.rgb_bg)
+    botframe.pack()
+    searchbutton = tk.Button(botframe,
+                              text='Search',
+                              font=(SYTMembers.font_bold, 20),
+                              bg=SYTMembers.rgb_ibutton,
+                              fg='black',
+                              cursor='hand2',
+                              activebackground=SYTMembers.rgb_hbutton,
+                              activeforeground='black',
+                              command=lambda: self.paint_find(name.get()))
+    searchbutton.pack()
+    if query is not None:
+      results = self.db.findmember(query)
+      if len(results) == 0:
+        tk.Label( botframe,
+                  text='No results found',
+                  bg=SYTMembers.rgb_bg,
+                  font=(SYTMembers.font_regular, 16),
+                  fg='black').pack()
+      else:
+        cols = tuple(key for key in self.db.memberdefaults.keys())
+        treeframe = tk.Frame( botframe,
+                              width=SYTMembers.width,
+                              height=SYTMembers.height,
+                              bg=SYTMembers.rgb_bg)
+        treeframe.pack()
+        membertree = ttk.Treeview(treeframe,
+                                  columns=cols,
+                                  selectmode='browse',
+                                  show='headings')
+        membertree.pack()
+        v_scrollbar = ttk.Scrollbar(treeframe,
+                                    orient=tk.VERTICAL,
+                                    command=membertree.yview)
+        v_scrollbar.pack(side='right', fill='x')
+        membertree.configure(xscrollcommand=v_scrollbar.set)
+        h_scrollbar = ttk.Scrollbar(treeframe,
+                                    orient=tk.HORIZONTAL,
+                                    command=membertree.xview)
+        h_scrollbar.pack(side='bottom', fill='y')
+        membertree.configure(yscrollcommand=h_scrollbar.set)
+        for i, col in enumerate(cols):
+          membertree.heading(col, text=col)
+          maxlen = max([len(str(result[i])) for result in results])
+          maxlen = max(maxlen, len(col))
+          membertree.column(col, width=maxlen*9)
+        for i, result in enumerate(results[:-1]):
+          membertree.insert('', tk.END, values=[str(s) for s in result])
 
   def paint_create(self, member=None):
     memberid = None if member is None else str(member['Member ID'])
-    titleframe = self.raisewithtitle(self.newmemberframe, columns=2)
+    titleframe = self.raisetitlegrid(self.newmemberframe, columns=2)
     errorlabel = tk.Label(titleframe,
                           textvariable=self.errortext,
                           bg=SYTMembers.rgb_bg,
@@ -112,7 +196,8 @@ class SYTMembers(tk.Tk):
     for field in self.db.memberdefaults:
       if self.db.memberdefaults[field] is not None:
         continue
-      if member is None and field in self.db.memberprotected and field != 'Name':
+      if member is None and \
+          field in self.db.memberprotected and field != 'Name':
         continue
       tk.Label( leftframe,
                 text=field,
@@ -248,7 +333,7 @@ class SYTMembers(tk.Tk):
                         memberid=self.member)
 
   def paint_swipe(self, errortext='', memberid=None):
-    titleframe = self.raisewithtitle(self.swipeframe)
+    titleframe = self.raisetitlegrid(self.swipeframe)
     if errortext != '':
       self.errortext.set(errortext)
     self.member = memberid
@@ -294,7 +379,7 @@ class SYTMembers(tk.Tk):
     self.eval('tk::PlaceWindow . center')
 
   def paint_trxn(self, member, msg=None):
-    titleframe = self.raisewithtitle(self.trxnframe, columns=2)
+    titleframe = self.raisetitlegrid(self.trxnframe, columns=2)
     if msg is not None:
       tk.Label( titleframe,
                 text=msg,
@@ -375,14 +460,14 @@ class SYTMembers(tk.Tk):
     self.eval('tk::PlaceWindow . center')
 
   def paint_main(self):
-    titleframe = self.raisewithtitle(self.mainframe)
+    titleframe = self.raisetitlegrid(self.mainframe)
     bodyframe = tk.Frame( self.mainframe,
                           width=SYTMembers.width,
                           height=SYTMembers.height,
                           bg=SYTMembers.rgb_bg)
     bodyframe.grid(row=1, column=0)
     buttons = { 'Transaction': self.paint_swipe,
-                'Search Members': self.paint_lookup,
+                'Search Members': self.paint_find,
                 'Create Member': self.paint_create,
               }
     for row, button in enumerate(buttons):
@@ -398,14 +483,14 @@ class SYTMembers(tk.Tk):
               ).grid(row=row, column=0, pady=20)
     self.eval('tk::PlaceWindow . center')
 
-  def paint_member(self, member):
-    titleframe = self.raisewithtitle(self.memberframe, columns=2)
-    leftframe = tk.Frame(self.memberframe,
+  def paint_editmember(self, member):
+    titleframe = self.raisetitlegrid(self.editmemberframe, columns=2)
+    leftframe = tk.Frame(self.editmemberframe,
                           width=SYTMembers.width/2,
                           height=SYTMembers.height,
                           bg=SYTMembers.rgb_bg)
     leftframe.grid(row=1, column=0, sticky='E', padx=(0,5))
-    rightframe = tk.Frame(self.memberframe,
+    rightframe = tk.Frame(self.editmemberframe,
                           width=SYTMembers.width/2,
                           height=SYTMembers.height,
                           bg=SYTMembers.rgb_bg)
@@ -428,7 +513,7 @@ class SYTMembers(tk.Tk):
                 font=(SYTMembers.font_regular, 15),
                 textvariable=value).grid(row=row, columns=1, pady=3)
       self.fields[field] = value
-    botframe = tk.Frame(self.memberframe,
+    botframe = tk.Frame(self.editmemberframe,
                         width=SYTMembers.width,
                         height=SYTMembers.height,
                         bg=SYTMembers.rgb_bg)
