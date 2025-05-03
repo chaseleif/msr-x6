@@ -1,6 +1,6 @@
 CREATE TABLE members (
-  "Member ID" INTEGER NOT NULL PRIMARY KEY,
   "Name" TEXT NOT NULL,
+  "Member ID" INTEGER NOT NULL PRIMARY KEY,
   "Activation" INTEGER NOT NULL,
   "Cards issued" INTEGER DEFAULT 0,
   "Active" INTEGER DEFAULT 1,
