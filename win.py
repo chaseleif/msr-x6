@@ -22,6 +22,7 @@ class SYTMembers(tk.Tk):
   def __init__(self):
     super().__init__()
     self.title('SYT Sport Bar & Pool Hall Members')
+    self.geometry(f'{SYTMembers.width}x{SYTMembers.height}')
     self.frames = []
     for frame in ('mainframe',
                   'trxnframe',
@@ -88,43 +89,34 @@ class SYTMembers(tk.Tk):
     titleframe.grid(row=0, column=0, columnspan=columns)
     return titleframe
 
-  def raisetitlepack(self, frame):
-    self.clear_widgets()
-    frame.tkraise()
-    frame.pack_propagate(False)
-    titleframe, title = self.windowtitle(frame)
-    title.pack()
-    titleframe.pack()
-    return titleframe
-
   def paint_find(self, query=None):
-    titleframe = self.raisetitlepack(self.findmemberframe)
+    titleframe = self.raisetitlegrid(self.findmemberframe, columns=2)
     leftframe = tk.Frame( self.findmemberframe,
                           width=SYTMembers.width/2,
                           height=SYTMembers.height,
                           bg=SYTMembers.rgb_bg)
-    leftframe.pack()
+    leftframe.grid(row=1, column=0, pady=10)
     rightframe = tk.Frame(self.findmemberframe,
                           width=SYTMembers.width/2,
                           height=SYTMembers.height,
                           bg=SYTMembers.rgb_bg)
-    rightframe.pack()
+    rightframe.grid(row=1, column=1, pady=10)
     tk.Label( leftframe,
               text='Name',
               bg=SYTMembers.rgb_bg,
               fg='black',
-              font=(SYTMembers.font_regular, 16)).pack()
+              font=(SYTMembers.font_regular, 16)).grid(row=0, column=0)
     name = tk.StringVar(rightframe)
     tk.Entry( rightframe,
               textvariable=name,
               bg=SYTMembers.rgb_bg,
               fg='black',
-              font=(SYTMembers.font_regular, 15)).pack()
+              font=(SYTMembers.font_regular, 15)).grid(row=0, column=1)
     botframe = tk.Frame(self.findmemberframe,
                         width=SYTMembers.width,
                         height=SYTMembers.height,
                         bg=SYTMembers.rgb_bg)
-    botframe.pack()
+    botframe.grid(row=2, column=0, columnspan=2, pady=10)
     searchbutton = tk.Button(botframe,
                               text='Search',
                               font=(SYTMembers.font_bold, 20),
@@ -134,7 +126,7 @@ class SYTMembers(tk.Tk):
                               activebackground=SYTMembers.rgb_hbutton,
                               activeforeground='black',
                               command=lambda: self.paint_find(name.get()))
-    searchbutton.pack()
+    searchbutton.grid(row=0, column=0, columnspan=2, pady=10)
     if query is not None:
       results = self.db.findmember(query)
       if len(results) == 0:
@@ -142,36 +134,46 @@ class SYTMembers(tk.Tk):
                   text='No results found',
                   bg=SYTMembers.rgb_bg,
                   font=(SYTMembers.font_regular, 16),
-                  fg='black').pack()
+                  fg='black').grid(row=1, column=0, columnspan=2, pady=10)
       else:
-        cols = tuple(key for key in self.db.memberdefaults.keys())
         treeframe = tk.Frame( botframe,
                               width=SYTMembers.width,
-                              height=SYTMembers.height,
                               bg=SYTMembers.rgb_bg)
-        treeframe.pack()
-        membertree = ttk.Treeview(treeframe,
+        treeframe.grid(row=1, column=0, columnspan=2, pady=10, sticky='nsew')
+        canvas = tk.Canvas( treeframe,
+                            width=SYTMembers.width)
+        v_scrollbar = ttk.Scrollbar(treeframe,
+                                    orient=tk.VERTICAL,
+                                    command=canvas.yview)
+        canvas.configure(yscrollcommand=v_scrollbar.set)
+        h_scrollbar = ttk.Scrollbar(treeframe,
+                                    orient=tk.HORIZONTAL,
+                                    command=canvas.xview)
+        canvas.configure(xscrollcommand=h_scrollbar.set)
+        contentframe = ttk.Frame(canvas)
+        contentframe.bind('<Configure>', lambda e:
+                          canvas.configure(scrollregion=canvas.bbox('all')))
+        cols = tuple(key for key in self.db.memberdefaults.keys())
+        membertree = ttk.Treeview(contentframe,
                                   columns=cols,
                                   selectmode='browse',
                                   show='headings')
-        membertree.pack()
-        v_scrollbar = ttk.Scrollbar(treeframe,
-                                    orient=tk.VERTICAL,
-                                    command=membertree.yview)
-        v_scrollbar.pack(side='right', fill='x')
-        membertree.configure(xscrollcommand=v_scrollbar.set)
-        h_scrollbar = ttk.Scrollbar(treeframe,
-                                    orient=tk.HORIZONTAL,
-                                    command=membertree.xview)
-        h_scrollbar.pack(side='bottom', fill='y')
-        membertree.configure(yscrollcommand=h_scrollbar.set)
+        membertree.grid(row=0, column=1, columnspan=2, pady=10)
         for i, col in enumerate(cols):
           membertree.heading(col, text=col)
           maxlen = max([len(str(result[i])) for result in results])
           maxlen = max(maxlen, len(col))
           membertree.column(col, width=maxlen*9)
-        for i, result in enumerate(results[:-1]):
+        for i, result in enumerate(results):
           membertree.insert('', tk.END, values=[str(s) for s in result])
+        treeframe.columnconfigure(0, weight=1)
+        treeframe.columnconfigure(1, weight=1)
+        treeframe.rowconfigure(0, weight=1)
+        canvas.create_window((0, 0), window=contentframe, anchor='nw')
+        canvas.grid(row=0, column=0, columnspan=2, sticky='nsew')
+        v_scrollbar.grid(row=0, column=1, sticky='nse')
+        h_scrollbar.grid(row=0, column=0, columnspan=2, sticky='sew',
+                          padx=(0,15))
 
   def paint_create(self, member=None):
     memberid = None if member is None else str(member['Member ID'])

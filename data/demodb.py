@@ -1,19 +1,21 @@
 #! /usr/bin/env python3
 
 import sqlite3
-'''
 from time import time
 try:
   with sqlite3.connect('members.db') as conn:
     curs = conn.cursor()
+    for i in range(20):
+      curs.execute('INSERT INTO members ("Member ID","Name","Activation")' + \
+                      f'VALUES(51{i}013503246,"Chase LP",{round(time())})')
     curs.execute('INSERT INTO members ("Member ID","Name","Activation")' + \
-                    f'VALUES(51000013503246,\'Chase LP\',{round(time())})')
+                    f'VALUES(98765,"Chase Phelps",{round(time())+1})')
     curs.execute('INSERT INTO members ("Member ID","Name","Activation")' + \
-                    f'VALUES(98765,\'Bob\',{round(time())+1})')
+                    f'VALUES(9876335,"Chaseleif",{round(time())+1})')
     conn.commit()
 except sqlite3.IntegrityError:
   pass
-'''
+
 with sqlite3.connect('members.db') as conn:
   curs = conn.cursor()
   curs.execute('PRAGMA table_info(members)')
@@ -23,8 +25,8 @@ with sqlite3.connect('members.db') as conn:
 
 print(schema)
 for member in members:
-  member = {field[1]:value for field, value in zip(schema, member)}
-  print(member)
+  for field, value in zip(schema, member):
+    print(field[1], '=', value)
 
 print(schema[0])
 '''
@@ -43,4 +45,17 @@ with sqlite3.connect('trxn.db') as conn:
 
 print(schema)
 for transaction in transactions:
-  print(transaction)
+  for field, value in zip(schema, transaction):
+    print(field[1],'=',value)
+
+with sqlite3.connect('members.db') as conn:
+  curs = conn.cursor()
+  name = 'Chase'
+  curs.execute('SELECT * from members')
+  #curs.execute(f'SELECT * from members WHERE "Name" LIKE "%{name}%"')
+  results = curs.fetchall()
+
+print(results)
+
+for result in results:
+  print(result)
