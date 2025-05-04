@@ -13,26 +13,35 @@ class SwipeThread:
                                           errortext,
                                           tracktext))
 
+  def setmsg(self, text, msg):
+    try:
+      text.set(msg)
+    except:
+      return False
+    return True
+
   def swipe(self, sigcancel, tracks, errortext, tracktext):
     with MSRX6() as msr:
       msr.connect()
       if msr.errormsg:
-        errortext.set(msr.errormsg)
+        self.setmsg(errortext, msr.errormsg)
         return True
       if tracks is None:
         tracks = msr.read_tracks()
         if msr.errormsg:
-          errortext.set(msr.errormsg)
+          if not self.setmsg(errortext, msr.errormsg):
+            return True
           return False
         if tracks is None:
           return False
-        tracktext.set('&'.join(tracks))
+        self.setmsg(tracktext, '&'.join(tracks))
         return True
       msr.write_tracks(tracks)
       if msr.errormsg:
-        errortext.set(msr.errormsg)
+        if not self.setmsg(errortext, msr.errormsg):
+          return True
         return False
-      tracktext.set('&'.join(tracks))
+      self.setmsg(tracktext, '&'.join(tracks))
       return True
 
   def idle(self, sigcancel, tracks, errortext, tracktext):
