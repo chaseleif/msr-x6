@@ -15,18 +15,40 @@ class DataBase:
     self.memberprotected = tuple(col[1] for col in schema if col[3] == 1)
     self.memberfieldtypes = {col[1]:col[2] for col in schema}
     self.memberdefaults = {col[1]:col[4] for col in schema}
+    self.member_timeidx = tuple(idx for idx,field \
+                                  in enumerate(self.memberdefaults.keys()) \
+                                  if field in ( 'Activation',
+                                                'Last day',
+                                                'Last league day')
+                                )
     self.trxndb = trxndb
     with sqlite3.connect(trxndb) as conn:
       curs = conn.cursor()
       curs.execute('PRAGMA table_info(transactions);')
       schema = curs.fetchall()
     self.trxndefaults = {col[1]:col[4] for col in schema}
+    self.trxn_timeidx = list(self.trxndefaults.keys()).index('Time')
+
+  def epoch2str(self, ts):
+    if ts == 0:
+      return 'Never'
+    ts = localtime(ts)
+    s = f'{ts.tm_mon}/{ts.tm_mday}/{ts.tm_year} '
+    s += f'{ts.tm_hour-12 if ts.tm_hour>12 else ts.tm_hour}:{ts.tm_min:02d}'
+    s += 'AM' if ts.tm_hour < 12 else 'PM'
+    return s
 
   def findmember(self, query):
     with sqlite3.connect(self.memberdb) as conn:
       curs = conn.cursor()
       curs.execute(f'SELECT * FROM members WHERE "Name" LIKE "%{query}%"')
       results = curs.fetchall()
+    for i in range(len(results)):
+      results[i] = tuple( self.epoch2str(field)
+                            if idx in self.member_timeidx \
+                            else field \
+                            for idx, field in enumerate(results[i])
+                        )
     return results
 
   def getmember(self, memberid):
@@ -39,6 +61,9 @@ class DataBase:
       curs.execute('PRAGMA table_info(members);')
       schema = curs.fetchall()
     member = {field[1]:value for field,value in zip(schema,member[0])}
+    for idx in self.member_timeidx:
+      member[list(self.memberdefaults.keys())[idx]] = \
+        self.epoch2str(member[list(self.memberdefaults.keys())[idx]])
     return member
 
   def generatememberid(self):

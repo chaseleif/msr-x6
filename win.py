@@ -16,8 +16,8 @@ class SYTMembers(tk.Tk):
   rgb_bg = '#ccffff'
   rgb_ibutton = '#99ccff'
   rgb_hbutton = '#0066cc'
-  font_regular = 'LiberationSans-Regular'
-  font_bold = 'LiberationSans-Bold'
+  font_regular = lambda size: ('LiberationSans-Regular', size)
+  font_bold = lambda size: ('LiberationSans-Bold', size, 'bold')
 
   def __init__(self):
     super().__init__()
@@ -75,7 +75,7 @@ class SYTMembers(tk.Tk):
                       text='Shai Yo Thai Sport Bar & Pool Hall',
                       bg=SYTMembers.rgb_bg,
                       fg='black',
-                      font=(SYTMembers.font_regular, 18))
+                      font=SYTMembers.font_regular(18))
     return titleframe, title
 
   def raisetitlegrid(self, frame, columns=1):
@@ -105,13 +105,13 @@ class SYTMembers(tk.Tk):
               text='Name',
               bg=SYTMembers.rgb_bg,
               fg='black',
-              font=(SYTMembers.font_regular, 16)).grid(row=0, column=0)
+              font=SYTMembers.font_regular(16)).grid(row=0, column=0)
     name = tk.StringVar(rightframe)
     tk.Entry( rightframe,
               textvariable=name,
               bg=SYTMembers.rgb_bg,
               fg='black',
-              font=(SYTMembers.font_regular, 15)).grid(row=0, column=1)
+              font=SYTMembers.font_regular(15)).grid(row=0, column=1)
     botframe = tk.Frame(self.findmemberframe,
                         width=SYTMembers.width,
                         height=SYTMembers.height,
@@ -119,7 +119,7 @@ class SYTMembers(tk.Tk):
     botframe.grid(row=2, column=0, columnspan=2, pady=10)
     searchbutton = tk.Button(botframe,
                               text='Search',
-                              font=(SYTMembers.font_bold, 20),
+                              font=SYTMembers.font_bold(20),
                               bg=SYTMembers.rgb_ibutton,
                               fg='black',
                               cursor='hand2',
@@ -133,7 +133,7 @@ class SYTMembers(tk.Tk):
         tk.Label( botframe,
                   text='No results found',
                   bg=SYTMembers.rgb_bg,
-                  font=(SYTMembers.font_regular, 16),
+                  font=SYTMembers.font_regular(16),
                   fg='black').grid(row=1, column=0, columnspan=2, pady=10)
       else:
         treeframe = tk.Frame( botframe,
@@ -142,10 +142,6 @@ class SYTMembers(tk.Tk):
         treeframe.grid(row=1, column=0, columnspan=2, pady=10, sticky='nsew')
         canvas = tk.Canvas( treeframe,
                             width=SYTMembers.width)
-        v_scrollbar = ttk.Scrollbar(treeframe,
-                                    orient=tk.VERTICAL,
-                                    command=canvas.yview)
-        canvas.configure(yscrollcommand=v_scrollbar.set)
         h_scrollbar = ttk.Scrollbar(treeframe,
                                     orient=tk.HORIZONTAL,
                                     command=canvas.xview)
@@ -154,16 +150,28 @@ class SYTMembers(tk.Tk):
         contentframe.bind('<Configure>', lambda e:
                           canvas.configure(scrollregion=canvas.bbox('all')))
         cols = tuple(key for key in self.db.memberdefaults.keys())
+        style = ttk.Style()
+        style.configure('membertree.Treeview',
+                        highlightthickness=0,
+                        bd=0,
+                        font=SYTMembers.font_regular(11))
+        style.configure('membertree.Treeview.Heading',
+                        font=SYTMembers.font_bold(11))
         membertree = ttk.Treeview(contentframe,
                                   columns=cols,
+                                  style='membertree.Treeview',
                                   selectmode='browse',
                                   show='headings')
-        membertree.grid(row=0, column=1, columnspan=2, pady=10)
+        v_scrollbar = ttk.Scrollbar(treeframe,
+                                    orient=tk.VERTICAL,
+                                    command=membertree.yview)
+        membertree.configure(yscrollcommand=v_scrollbar.set)
+        membertree.grid(row=0, column=1, columnspan=2, pady=10, padx=(0,10))
         for i, col in enumerate(cols):
           membertree.heading(col, text=col)
           maxlen = max([len(str(result[i])) for result in results])
-          maxlen = max(maxlen, len(col))
-          membertree.column(col, width=maxlen*9)
+          maxlen = max(maxlen*10, len(col)*12)
+          membertree.column(col, width=maxlen, anchor=tk.CENTER)
         for i, result in enumerate(results):
           membertree.insert('', tk.END, values=[str(s) for s in result])
         treeframe.columnconfigure(0, weight=1)
@@ -171,9 +179,30 @@ class SYTMembers(tk.Tk):
         treeframe.rowconfigure(0, weight=1)
         canvas.create_window((0, 0), window=contentframe, anchor='nw')
         canvas.grid(row=0, column=0, columnspan=2, sticky='nsew')
-        v_scrollbar.grid(row=0, column=1, sticky='nse')
+        v_scrollbar.grid(row=0, column=0, columnspan=2, sticky='nse')
         h_scrollbar.grid(row=0, column=0, columnspan=2, sticky='sew',
                           padx=(0,15))
+        tk.Button(botframe,
+                  text='Select',
+                  font=SYTMembers.font_bold(20),
+                  bg=SYTMembers.rgb_ibutton,
+                  fg='black',
+                  cursor='hand2',
+                  activebackground=SYTMembers.rgb_hbutton,
+                  activeforeground='black',
+                  command=lambda: self.find_selection(membertree),
+                  ).grid(row=2, column=0, columnspan=2, pady=10)
+    tk.Button(botframe,
+              text='Return to Home Screen',
+              font=SYTMembers.font_bold(20),
+              bg=SYTMembers.rgb_ibutton,
+              fg='black',
+              cursor='hand2',
+              activebackground=SYTMembers.rgb_hbutton,
+              activeforeground='black',
+              command=self.paint_main,
+              ).grid(row=1 if query is None else 2 if len(results) == 0 else 3,
+                      column=0, columnspan=2, pady=10)
 
   def paint_create(self, member=None):
     memberid = None if member is None else str(member['Member ID'])
@@ -182,7 +211,7 @@ class SYTMembers(tk.Tk):
                           textvariable=self.errortext,
                           bg=SYTMembers.rgb_bg,
                           fg='red',
-                          font=(SYTMembers.font_bold, 16))
+                          font=SYTMembers.font_bold(16))
     errorlabel.grid(row=1, column=0, columnspan=2, pady=10)
     leftframe = tk.Frame( self.newmemberframe,
                           width=SYTMembers.width/2,
@@ -205,12 +234,12 @@ class SYTMembers(tk.Tk):
                 text=field,
                 bg=SYTMembers.rgb_bg,
                 fg='black',
-                font=(SYTMembers.font_regular, 16)
+                font=SYTMembers.font_regular(16)
               ).grid(row=row, column=0, pady=3)
       value = tk.StringVar(rightframe, '' if member is None else member[field])
       tk.Entry( rightframe,
                 bg=SYTMembers.rgb_bg,
-                font=(SYTMembers.font_regular, 15),
+                font=SYTMembers.font_regular(15),
                 state='normal' if member is None else 'disabled',
                 textvariable=value).grid(row=row, column=1, pady=3)
       self.fields[field] = value
@@ -222,7 +251,7 @@ class SYTMembers(tk.Tk):
     botframe.grid(row=2, column=0, columnspan=2)
     program_button = tk.Button(botframe,
                               text='Program Card',
-                              font=(SYTMembers.font_bold, 20),
+                              font=SYTMembers.font_bold(20),
                               bg=SYTMembers.rgb_ibutton,
                               fg='black',
                               cursor='hand2',
@@ -232,7 +261,7 @@ class SYTMembers(tk.Tk):
                               command=lambda: self.paint_swipe(memberid=memberid))
     tk.Button(botframe,
               text='Create',
-              font=(SYTMembers.font_bold, 20),
+              font=SYTMembers.font_bold(20),
               bg=SYTMembers.rgb_ibutton,
               fg='black',
               cursor='hand2',
@@ -245,7 +274,7 @@ class SYTMembers(tk.Tk):
     if member is not None:
       tk.Button(botframe,
                 text='Delete Member',
-                font=(SYTMembers.font_bold, 20),
+                font=SYTMembers.font_bold(20),
                 bg=SYTMembers.rgb_ibutton,
                 fg='black',
                 cursor='hand2',
@@ -255,7 +284,7 @@ class SYTMembers(tk.Tk):
               ).grid(row=2, column=0, columnspan=2, pady=10)
     tk.Button(botframe,
               text='Return to Home Screen',
-              font=(SYTMembers.font_bold, 20),
+              font=SYTMembers.font_bold(20),
               bg=SYTMembers.rgb_ibutton,
               fg='black',
               cursor='hand2',
@@ -265,6 +294,13 @@ class SYTMembers(tk.Tk):
             ).grid(row=2 if member is None else 3,
                     column=0, columnspan=2, pady=10)
     self.eval('tk::PlaceWindow . center')
+
+  def find_selection(self, membertree):
+    if membertree.selection():
+      member = membertree.item(membertree.selection(), 'values')
+      member = {key:val for key, val in zip(self.db.memberdefaults.keys(),
+                                              member)}
+      self.paint_editmember(member)
 
   def save_member(self, member):
     modified = {}
@@ -346,7 +382,7 @@ class SYTMembers(tk.Tk):
     bodyframe.grid(row=1, column=0)
     self.swipebutton = tk.Button( bodyframe,
                                   text='Swipe',
-                                  font=(SYTMembers.font_bold, 20),
+                                  font=SYTMembers.font_bold(20),
                                   bg=SYTMembers.rgb_ibutton,
                                   fg='black',
                                   cursor='hand2',
@@ -362,7 +398,7 @@ class SYTMembers(tk.Tk):
       self.swipebutton['command'] = lambda: self.writeswipe(self.swipebutton)
     tk.Button(bodyframe,
               text='Cancel',
-              font=(SYTMembers.font_bold, 20),
+              font=SYTMembers.font_bold(20),
               bg=SYTMembers.rgb_ibutton,
               fg='black',
               cursor='hand2',
@@ -374,7 +410,7 @@ class SYTMembers(tk.Tk):
                           textvariable=self.errortext,
                           bg=SYTMembers.rgb_bg,
                           fg='red',
-                          font=(SYTMembers.font_bold, 16))
+                          font=SYTMembers.font_bold(16))
     errorlabel.grid(row=2, column=0, pady=10)
     self.errortext.trace_add('write', callback=self.swipe_error_callback)
     self.tracktext.trace_add('write', callback=self.read_callback)
@@ -387,8 +423,10 @@ class SYTMembers(tk.Tk):
                 text=msg,
                 bg=SYTMembers.rgb_bg,
                 fg='dark blue',
-                font=(SYTMembers.font_bold, 16)).grid(row=1, column=0,
-                                                      pady=10, columnspan=2)
+                font=SYTMembers.font_bold(16)).grid(row=1,
+                                                              column=0,
+                                                              pady=10,
+                                                              columnspan=2)
     self.member = member
     leftframe = tk.Frame( self.trxnframe,
                           width=SYTMembers.width/2,
@@ -404,12 +442,16 @@ class SYTMembers(tk.Tk):
               text=member['Name'],
               bg=SYTMembers.rgb_bg,
               fg='black',
-              font=(SYTMembers.font_bold, 16)).grid(row=0, column=0, pady=10)
+              font=SYTMembers.font_bold(16)).grid(row=0,
+                                                            column=0,
+                                                            pady=10)
     tk.Label( rightframe,
               text=member['Member ID'],
               bg=SYTMembers.rgb_bg,
               fg='black',
-              font=(SYTMembers.font_bold, 16)).grid(row=0, column=1, pady=10)
+              font=SYTMembers.font_bold(16)).grid(row=0,
+                                                            column=1,
+                                                            pady=10)
     self.fields = { 'Total spent':None,
                     'Total hours':None }
     row = 1
@@ -418,14 +460,14 @@ class SYTMembers(tk.Tk):
                 text=field,
                 bg=SYTMembers.rgb_bg,
                 fg='black',
-                font=(SYTMembers.font_regular, 16)
+                font=SYTMembers.font_regular(16)
               ).grid(row=row, column=0, pady=10)
       value = tk.StringVar(rightframe)
       tk.Entry( rightframe,
                 textvariable=value,
                 bg=SYTMembers.rgb_bg,
                 fg='black',
-                font=(SYTMembers.font_regular, 15)).grid(row=row, column=1,
+                font=SYTMembers.font_regular(15)).grid(row=row, column=1,
                                                           pady=10)
       self.fields[field] = value
       row += 1
@@ -435,12 +477,12 @@ class SYTMembers(tk.Tk):
                                 bg=SYTMembers.rgb_bg,
                                 activebackground=SYTMembers.rgb_bg,
                                 cursor='hand2',
-                                font=(SYTMembers.font_regular, 16))
+                                font=SYTMembers.font_regular(16))
     leagueday.grid(row=row, column=0, pady=10, columnspan=2)
     row += 1
     tk.Button(self.trxnframe,
               text='Process transaction',
-              font=(SYTMembers.font_bold, 20),
+              font=SYTMembers.font_bold(20),
               bg=SYTMembers.rgb_ibutton,
               fg='black',
               cursor='hand2',
@@ -451,7 +493,7 @@ class SYTMembers(tk.Tk):
     row += 1
     tk.Button(self.trxnframe,
               text='Return to Home Screen',
-              font=(SYTMembers.font_bold, 20),
+              font=SYTMembers.font_bold(20),
               bg=SYTMembers.rgb_ibutton,
               fg='black',
               cursor='hand2',
@@ -475,7 +517,7 @@ class SYTMembers(tk.Tk):
     for row, button in enumerate(buttons):
       tk.Button(bodyframe,
                 text=button,
-                font=(SYTMembers.font_bold, 20),
+                font=SYTMembers.font_bold(20),
                 bg=SYTMembers.rgb_ibutton,
                 fg='black',
                 cursor='hand2',
@@ -502,7 +544,7 @@ class SYTMembers(tk.Tk):
                 text=field,
                 bg=SYTMembers.rgb_bg,
                 fg='black',
-                font=(SYTMembers.font_regular, 16)
+                font=SYTMembers.font_regular(16)
               ).grid(row=row, column=0, pady=3)
       value = tk.StringVar(rightframe, str(member[field]))
       tk.Entry( rightframe,
@@ -512,7 +554,7 @@ class SYTMembers(tk.Tk):
                 bg=SYTMembers.rgb_bg,
                 disabledbackground=SYTMembers.rgb_bg,
                 disabledforeground='#424242',
-                font=(SYTMembers.font_regular, 15),
+                font=SYTMembers.font_regular(15),
                 textvariable=value).grid(row=row, columns=1, pady=3)
       self.fields[field] = value
     botframe = tk.Frame(self.editmemberframe,
@@ -527,7 +569,7 @@ class SYTMembers(tk.Tk):
       tk.Button(
           botframe,
           text=button,
-          font=(SYTMembers.font_bold, 20),
+          font=SYTMembers.font_bold(20),
           bg=SYTMembers.rgb_ibutton,
           fg='black',
           cursor='hand2',
