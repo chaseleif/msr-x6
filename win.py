@@ -137,7 +137,7 @@ class SYTMembers(tk.Tk):
       frame.columnconfigure(column, weight=1)
     frame.grid_propagate(False)
     titleframe, title = self.windowtitle(frame)
-    title.grid(row=0, column=0, columnspan=columns, pady=20)
+    title.grid(row=0, column=0, columnspan=columns, pady=10)
     titleframe.grid(row=0, column=0, columnspan=columns)
     return titleframe
 
@@ -478,13 +478,15 @@ class SYTMembers(tk.Tk):
                           bg=SYTMembers.rgb_bg)
     rightframe.grid(row=1, column=1, sticky='W', padx=(5,0))
     for row, field in enumerate(member):
-      self.label(leftframe, text=field).grid(row=row, column=0, pady=3)
+      self.label( leftfriame,
+                  text=field,
+                  size=14).grid(row=row, column=0, pady=0)
       value = tk.StringVar(rightframe, str(member[field]))
       self.entry(rightframe,
                   textvariable=value,
                   state='disabled' if field in self.db.memberprotected \
                         else 'normal'
-                ).grid(row=row, columns=1, pady=3)
+                ).grid(row=row, columns=1, pady=(1,0))
       self.fields[field] = value
     botframe = tk.Frame(self.editmemberframe,
                         width=SYTMembers.width,
