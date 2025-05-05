@@ -1,18 +1,24 @@
 #! /usr/bin/env python3
 
-import pyglet
+import os, pyglet, sys
 import tkinter as tk
 from tkinter import ttk
 #from PIL import Image, ImageTk
 from db import DataBase
 from swipe import SwipeThread
 
-pyglet.font.add_file('resources/LiberationSans-Bold.ttf')
-pyglet.font.add_file('resources/LiberationSans-Regular.ttf')
+try:
+  pyglet.font.add_file(os.path.join(sys._MEIPASS,
+                                    'resources', 'LiberationSans-Bold.ttf'))
+  pyglet.font.add_file(os.path.join(sys._MEIPASS,
+                                    'resources', 'LiberationSans-Regular.ttf'))
+except AttributeError:
+  pyglet.font.add_file(os.path.join('resources', 'LiberationSans-Bold.ttf'))
+  pyglet.font.add_file(os.path.join('resources', 'LiberationSans-Regular.ttf'))
 
 class SYTMembers(tk.Tk):
-  width = 750
-  height = 800
+  width = 600
+  height = 700
   rgb_bg = '#ccffff'
   rgb_ibutton = '#99ccff'
   rgb_hbutton = '#0066cc'
@@ -57,6 +63,18 @@ class SYTMembers(tk.Tk):
     if self.swipe is not None:
       self.swipe.stop()
     self.quit()
+
+  def button(self, frame, text, command, state='normal'):
+    return tk.Button( frame,
+                      text=text,
+                      font=SYTMembers.font_bold(20),
+                      bg=SYTMembers.rgb_ibutton,
+                      fg='black',
+                      cursor='hand2',
+                      state=state,
+                      activebackground=SYTMembers.rgb_hbutton,
+                      activeforeground='black',
+                      command=command)
 
   def process_trxn(self):
     for field in self.fields:
@@ -117,15 +135,9 @@ class SYTMembers(tk.Tk):
                         height=SYTMembers.height,
                         bg=SYTMembers.rgb_bg)
     botframe.grid(row=2, column=0, columnspan=2, pady=10)
-    searchbutton = tk.Button(botframe,
-                              text='Search',
-                              font=SYTMembers.font_bold(20),
-                              bg=SYTMembers.rgb_ibutton,
-                              fg='black',
-                              cursor='hand2',
-                              activebackground=SYTMembers.rgb_hbutton,
-                              activeforeground='black',
-                              command=lambda: self.paint_find(name.get()))
+    searchbutton = self.button( botframe,
+                                'Search',
+                                lambda: self.paint_find(name.get()))
     searchbutton.grid(row=0, column=0, columnspan=2, pady=10)
     if query is not None:
       results = self.db.findmember(query)
@@ -182,27 +194,17 @@ class SYTMembers(tk.Tk):
         v_scrollbar.grid(row=0, column=0, columnspan=2, sticky='nse')
         h_scrollbar.grid(row=0, column=0, columnspan=2, sticky='sew',
                           padx=(0,15))
-        tk.Button(botframe,
-                  text='Select',
-                  font=SYTMembers.font_bold(20),
-                  bg=SYTMembers.rgb_ibutton,
-                  fg='black',
-                  cursor='hand2',
-                  activebackground=SYTMembers.rgb_hbutton,
-                  activeforeground='black',
-                  command=lambda: self.find_selection(membertree),
-                  ).grid(row=2, column=0, columnspan=2, pady=10)
-    tk.Button(botframe,
-              text='Return to Home Screen',
-              font=SYTMembers.font_bold(20),
-              bg=SYTMembers.rgb_ibutton,
-              fg='black',
-              cursor='hand2',
-              activebackground=SYTMembers.rgb_hbutton,
-              activeforeground='black',
-              command=self.paint_main,
-              ).grid(row=1 if query is None else 2 if len(results) == 0 else 3,
-                      column=0, columnspan=2, pady=10)
+        self.button(botframe,
+                    'Select',
+                    lambda: self.find_selection(membertree)
+                    ).grid(row=2, column=0, columnspan=2, pady=10)
+    self.button(botframe,
+                'Return to Home Screen',
+                self.paint_main
+                ).grid(row=1 if query is None \
+                              else 2 if len(results)==0 \
+                              else 3,
+                        column=0, columnspan=2, pady=10)
 
   def paint_create(self, member=None):
     memberid = None if member is None else str(member['Member ID'])
@@ -249,50 +251,27 @@ class SYTMembers(tk.Tk):
                         height=SYTMembers.height,
                         bg=SYTMembers.rgb_bg)
     botframe.grid(row=2, column=0, columnspan=2)
-    program_button = tk.Button(botframe,
-                              text='Program Card',
-                              font=SYTMembers.font_bold(20),
-                              bg=SYTMembers.rgb_ibutton,
-                              fg='black',
-                              cursor='hand2',
-                              activebackground=SYTMembers.rgb_hbutton,
-                              activeforeground='black',
-                              state='disabled' if member is None else 'normal',
-                              command=lambda: self.paint_swipe(memberid=memberid))
-    tk.Button(botframe,
-              text='Create',
-              font=SYTMembers.font_bold(20),
-              bg=SYTMembers.rgb_ibutton,
-              fg='black',
-              cursor='hand2',
-              activebackground=SYTMembers.rgb_hbutton,
-              activeforeground='black',
-              state='normal' if member is None else 'disabled',
-              command=lambda: self.create_member(program_button),
-            ).grid(row=0, column=0, columnspan=2, pady=(30,10))
+    program_button = self.button( botframe,
+                                  'Program Card',
+                                  lambda: self.paint_swipe(memberid=memberid),
+                                  state='disabled' if member is None \
+                                        else 'normal')
+    self.button(botframe,
+                'Create',
+                lambda: self.create_member(program_button),
+                state='normal' if member is None else 'disabled'
+                ).grid(row=0, column=0, columnspan=2, pady=(30,10))
     program_button.grid(row=1, column=0, columnspan=2, pady=10)
     if member is not None:
-      tk.Button(botframe,
-                text='Delete Member',
-                font=SYTMembers.font_bold(20),
-                bg=SYTMembers.rgb_ibutton,
-                fg='black',
-                cursor='hand2',
-                activebackground=SYTMembers.rgb_hbutton,
-                activeforeground='black',
-                command=lambda: self.delete_member(member),
-              ).grid(row=2, column=0, columnspan=2, pady=10)
-    tk.Button(botframe,
-              text='Return to Home Screen',
-              font=SYTMembers.font_bold(20),
-              bg=SYTMembers.rgb_ibutton,
-              fg='black',
-              cursor='hand2',
-              activebackground=SYTMembers.rgb_hbutton,
-              activeforeground='black',
-              command=lambda: self.paint_main(),
-            ).grid(row=2 if member is None else 3,
-                    column=0, columnspan=2, pady=10)
+      self.button(botframe,
+                  'Delete Member',
+                  lambda: self.delete_member(member)
+                  ).grid(row=2, column=0, columnspan=2, pady=10)
+    self.button(botframe,
+                'Return to Home Screen',
+                self.paint_main
+                ).grid(row=2 if member is None else 3,
+                        column=0, columnspan=2, pady=10)
     self.eval('tk::PlaceWindow . center')
 
   def find_selection(self, membertree):
@@ -380,32 +359,18 @@ class SYTMembers(tk.Tk):
                           height=SYTMembers.height,
                           bg=SYTMembers.rgb_bg)
     bodyframe.grid(row=1, column=0)
-    self.swipebutton = tk.Button( bodyframe,
-                                  text='Swipe',
-                                  font=SYTMembers.font_bold(20),
-                                  bg=SYTMembers.rgb_ibutton,
-                                  fg='black',
-                                  cursor='hand2',
-                                  activebackground=SYTMembers.rgb_hbutton,
-                                  activeforeground='black',
-                                  command=lambda: errortext,
-                                  state=tk.NORMAL,
-                                )
+    self.swipebutton = self.button( bodyframe,
+                                    'Swipe',
+                                    None)
     self.swipebutton.grid(row=0, column=0, pady=10)
     if memberid is None:
       self.swipebutton['command'] = lambda: self.readswipe(self.swipebutton)
     else:
       self.swipebutton['command'] = lambda: self.writeswipe(self.swipebutton)
-    tk.Button(bodyframe,
-              text='Cancel',
-              font=SYTMembers.font_bold(20),
-              bg=SYTMembers.rgb_ibutton,
-              fg='black',
-              cursor='hand2',
-              activebackground=SYTMembers.rgb_hbutton,
-              activeforeground='black',
-              command=lambda: self.swipecancel(self.paint_main),
-            ).grid(row=1, column=0, pady=10)
+    self.button(bodyframe,
+                'Cancel',
+                lambda: self.swipecancel(self.paint_main)
+                ).grid(row=1, column=0, pady=10)
     errorlabel = tk.Label(bodyframe,
                           textvariable=self.errortext,
                           bg=SYTMembers.rgb_bg,
@@ -480,27 +445,15 @@ class SYTMembers(tk.Tk):
                                 font=SYTMembers.font_regular(16))
     leagueday.grid(row=row, column=0, pady=10, columnspan=2)
     row += 1
-    tk.Button(self.trxnframe,
-              text='Process transaction',
-              font=SYTMembers.font_bold(20),
-              bg=SYTMembers.rgb_ibutton,
-              fg='black',
-              cursor='hand2',
-              activebackground=SYTMembers.rgb_hbutton,
-              activeforeground='black',
-              command=lambda: self.process_trxn()).grid(row=row, column=0,
-                                                        pady=10, columnspan=2)
+    self.button(self.trxnframe,
+                'Process Transaction',
+                self.process_trxn
+                ).grid(row=row, column=0, columnspan=2, pady=10)
     row += 1
-    tk.Button(self.trxnframe,
-              text='Return to Home Screen',
-              font=SYTMembers.font_bold(20),
-              bg=SYTMembers.rgb_ibutton,
-              fg='black',
-              cursor='hand2',
-              activebackground=SYTMembers.rgb_hbutton,
-              activeforeground='black',
-              command=self.paint_main).grid(row=row, column=0,
-                                            pady=10, columnspan=2)
+    self.button(self.trxnframe,
+                'Return to Home Screen',
+                self.paint_main
+                ).grid(row=row, column=0, columnspan=2, pady=10)
     self.eval('tk::PlaceWindow . center')
 
   def paint_main(self):
@@ -515,16 +468,10 @@ class SYTMembers(tk.Tk):
                 'Create Member': self.paint_create,
               }
     for row, button in enumerate(buttons):
-      tk.Button(bodyframe,
-                text=button,
-                font=SYTMembers.font_bold(20),
-                bg=SYTMembers.rgb_ibutton,
-                fg='black',
-                cursor='hand2',
-                activebackground=SYTMembers.rgb_hbutton,
-                activeforeground='black',
-                command=lambda button=button: buttons[button](),
-              ).grid(row=row, column=0, pady=20)
+      self.button(bodyframe,
+                  button,
+                  lambda button=button: buttons[button]()
+                  ).grid(row=row, column=0, pady=20)
     self.eval('tk::PlaceWindow . center')
 
   def paint_editmember(self, member):
@@ -566,17 +513,10 @@ class SYTMembers(tk.Tk):
                 'Return to Home Screen': self.paint_main,
               }
     for row, button in enumerate(buttons):
-      tk.Button(
-          botframe,
-          text=button,
-          font=SYTMembers.font_bold(20),
-          bg=SYTMembers.rgb_ibutton,
-          fg='black',
-          cursor='hand2',
-          activebackground=SYTMembers.rgb_hbutton,
-          activeforeground='black',
-          command=lambda button=button: buttons[button](),
-        ).grid(row=row, column=0, columnspan=2, pady=10)
+      self.button(botframe,
+                  button,
+                  lambda button=button: buttons[button]()
+                  ).grid(row=row, column=0, columnspan=2, pady=10)
     self.eval('tk::PlaceWindow . center')
 
 if __name__=='__main__':

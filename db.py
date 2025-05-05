@@ -1,14 +1,19 @@
 #! /usr/bin/env python3
 
-import sqlite3
+import os, sqlite3, sys
 from secrets import randbelow
 from time import localtime, mktime, struct_time, time
 
 class DataBase:
   idlength = 10
-  def __init__(self, memberdb='data/members.db', trxndb='data/trxn.db'):
-    self.memberdb = memberdb
-    with sqlite3.connect(memberdb) as conn:
+  def __init__(self,
+                memberdb=os.path.join('data', 'members.db'),
+                trxndb=os.path.join('data', 'trxn.db')):
+    try:
+      self.memberdb = os.path.join(sys._MEIPASS, memberdb)
+    except AttributeError:
+      self.memberdb = memberdb
+    with sqlite3.connect(self.memberdb) as conn:
       curs = conn.cursor()
       curs.execute('PRAGMA table_info(members);')
       schema = curs.fetchall()
@@ -21,8 +26,11 @@ class DataBase:
                                                 'Last day',
                                                 'Last league day')
                                 )
-    self.trxndb = trxndb
-    with sqlite3.connect(trxndb) as conn:
+    try:
+      self.trxndb = os.path.join(sys._MEIPASS, trxndb)
+    except AttributeError:
+      self.trxndb = trxndb
+    with sqlite3.connect(self.trxndb) as conn:
       curs = conn.cursor()
       curs.execute('PRAGMA table_info(transactions);')
       schema = curs.fetchall()
