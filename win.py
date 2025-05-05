@@ -76,6 +76,42 @@ class SYTMembers(tk.Tk):
                       activeforeground='black',
                       command=command)
 
+  def label(self, frame,
+            text=None, textvariable=None,
+            fg='black', size=16):
+    if textvariable is None:
+      return tk.Label(frame,
+                      text=text,
+                      bg=SYTMembers.rgb_bg,
+                      fg=fg,
+                      font=SYTMembers.font_regular(size) if fg=='black' \
+                          else SYTMembers.font_bold(size))
+    return tk.Label(frame,
+                    textvariable=textvariable,
+                    bg=SYTMembers.rgb_bg,
+                    fg=fg,
+                    font=SYTMembers.font_regular(size) if fg=='black' \
+                          else SYTMembers.font_bold(size))
+
+  def entry(self, frame, text=None, textvariable=None, state='normal'):
+    if textvariable is None:
+      return tk.Entry(frame,
+                      text=text,
+                      bg=SYTMembers.rgb_bg,
+                      fg='black',
+                      disabledbackground=SYTMembers.rgb_bg,
+                      disabledforeground='#424242',
+                      state=state,
+                      font=SYTMembers.font_regular(15))
+    return tk.Entry(frame,
+                    textvariable=textvariable,
+                    bg=SYTMembers.rgb_bg,
+                    fg='black',
+                    disabledbackground=SYTMembers.rgb_bg,
+                    disabledforeground='#424242',
+                    state=state,
+                    font=SYTMembers.font_regular(15))
+
   def process_trxn(self):
     for field in self.fields:
       self.fields[field] = self.fields[field].get()
@@ -89,11 +125,9 @@ class SYTMembers(tk.Tk):
                           width=SYTMembers.width,
                           height=SYTMembers.height,
                           bg=SYTMembers.rgb_bg)
-    title = tk.Label( titleframe,
-                      text='Shai Yo Thai Sport Bar & Pool Hall',
-                      bg=SYTMembers.rgb_bg,
-                      fg='black',
-                      font=SYTMembers.font_regular(18))
+    title = self.label( titleframe,
+                        text='Shai Yo Thai Sport Bar & Pool Hall',
+                        size=18)
     return titleframe, title
 
   def raisetitlegrid(self, frame, columns=1):
@@ -119,17 +153,9 @@ class SYTMembers(tk.Tk):
                           height=SYTMembers.height,
                           bg=SYTMembers.rgb_bg)
     rightframe.grid(row=1, column=1, pady=10)
-    tk.Label( leftframe,
-              text='Name',
-              bg=SYTMembers.rgb_bg,
-              fg='black',
-              font=SYTMembers.font_regular(16)).grid(row=0, column=0)
+    self.label(leftframe, text='Name').grid(row=0, column=0)
     name = tk.StringVar(rightframe)
-    tk.Entry( rightframe,
-              textvariable=name,
-              bg=SYTMembers.rgb_bg,
-              fg='black',
-              font=SYTMembers.font_regular(15)).grid(row=0, column=1)
+    self.entry(rightframe, textvariable=name).grid(row=0, column=1)
     botframe = tk.Frame(self.findmemberframe,
                         width=SYTMembers.width,
                         height=SYTMembers.height,
@@ -142,11 +168,9 @@ class SYTMembers(tk.Tk):
     if query is not None:
       results = self.db.findmember(query)
       if len(results) == 0:
-        tk.Label( botframe,
-                  text='No results found',
-                  bg=SYTMembers.rgb_bg,
-                  font=SYTMembers.font_regular(16),
-                  fg='black').grid(row=1, column=0, columnspan=2, pady=10)
+        self.label( botframe,
+                    text='No results found'
+                  ).grid(row=1, column=0, columnspan=2, pady=10)
       else:
         treeframe = tk.Frame( botframe,
                               width=SYTMembers.width,
@@ -209,11 +233,9 @@ class SYTMembers(tk.Tk):
   def paint_create(self, member=None):
     memberid = None if member is None else str(member['Member ID'])
     titleframe = self.raisetitlegrid(self.newmemberframe, columns=2)
-    errorlabel = tk.Label(titleframe,
-                          textvariable=self.errortext,
-                          bg=SYTMembers.rgb_bg,
-                          fg='red',
-                          font=SYTMembers.font_bold(16))
+    errorlabel = self.label(titleframe,
+                            textvariable=self.errortext,
+                            fg='red')
     errorlabel.grid(row=1, column=0, columnspan=2, pady=10)
     leftframe = tk.Frame( self.newmemberframe,
                           width=SYTMembers.width/2,
@@ -232,18 +254,12 @@ class SYTMembers(tk.Tk):
       if member is None and \
           field in self.db.memberprotected and field != 'Name':
         continue
-      tk.Label( leftframe,
-                text=field,
-                bg=SYTMembers.rgb_bg,
-                fg='black',
-                font=SYTMembers.font_regular(16)
-              ).grid(row=row, column=0, pady=3)
+      self.label(leftframe, text=field).grid(row=row, column=0, pady=3)
       value = tk.StringVar(rightframe, '' if member is None else member[field])
-      tk.Entry( rightframe,
-                bg=SYTMembers.rgb_bg,
-                font=SYTMembers.font_regular(15),
-                state='normal' if member is None else 'disabled',
-                textvariable=value).grid(row=row, column=1, pady=3)
+      self.entry( rightframe,
+                  textvariable=value,
+                  state='normal' if member is None else 'disabled'
+                ).grid(row=row, column=1, pady=3)
       self.fields[field] = value
       row += 1
     botframe = tk.Frame(self.newmemberframe,
@@ -371,11 +387,9 @@ class SYTMembers(tk.Tk):
                 'Cancel',
                 lambda: self.swipecancel(self.paint_main)
                 ).grid(row=1, column=0, pady=10)
-    errorlabel = tk.Label(bodyframe,
-                          textvariable=self.errortext,
-                          bg=SYTMembers.rgb_bg,
-                          fg='red',
-                          font=SYTMembers.font_bold(16))
+    errorlabel = self.label(bodyframe,
+                            textvariable=self.errortext,
+                            fg='red')
     errorlabel.grid(row=2, column=0, pady=10)
     self.errortext.trace_add('write', callback=self.swipe_error_callback)
     self.tracktext.trace_add('write', callback=self.read_callback)
@@ -384,14 +398,10 @@ class SYTMembers(tk.Tk):
   def paint_trxn(self, member, msg=None):
     titleframe = self.raisetitlegrid(self.trxnframe, columns=2)
     if msg is not None:
-      tk.Label( titleframe,
-                text=msg,
-                bg=SYTMembers.rgb_bg,
-                fg='dark blue',
-                font=SYTMembers.font_bold(16)).grid(row=1,
-                                                              column=0,
-                                                              pady=10,
-                                                              columnspan=2)
+      self.label( titleframe,
+                  text=msg,
+                  fg='dark blue'
+                ).grid(row=1, column=0, columnspan=2, pady=10)
     self.member = member
     leftframe = tk.Frame( self.trxnframe,
                           width=SYTMembers.width/2,
@@ -403,37 +413,18 @@ class SYTMembers(tk.Tk):
                           height=SYTMembers.height,
                           bg=SYTMembers.rgb_bg)
     rightframe.grid(row=1, column=1, sticky='W', padx=(5,0))
-    tk.Label( leftframe,
-              text=member['Name'],
-              bg=SYTMembers.rgb_bg,
-              fg='black',
-              font=SYTMembers.font_bold(16)).grid(row=0,
-                                                            column=0,
-                                                            pady=10)
-    tk.Label( rightframe,
-              text=member['Member ID'],
-              bg=SYTMembers.rgb_bg,
-              fg='black',
-              font=SYTMembers.font_bold(16)).grid(row=0,
-                                                            column=1,
-                                                            pady=10)
+    self.label(leftframe,
+                text=member['Name']).grid(row=0, column=0, pady=10)
+    self.label(rightframe,
+                text=member['Member ID']).grid(row=0, column=1, pady=10)
     self.fields = { 'Total spent':None,
                     'Total hours':None }
     row = 1
     for field in self.fields:
-      tk.Label( leftframe,
-                text=field,
-                bg=SYTMembers.rgb_bg,
-                fg='black',
-                font=SYTMembers.font_regular(16)
-              ).grid(row=row, column=0, pady=10)
+      self.label(leftframe, text=field).grid(row=row, column=0, pady=10)
       value = tk.StringVar(rightframe)
-      tk.Entry( rightframe,
-                textvariable=value,
-                bg=SYTMembers.rgb_bg,
-                fg='black',
-                font=SYTMembers.font_regular(15)).grid(row=row, column=1,
-                                                          pady=10)
+      self.entry(rightframe, textvariable=value).grid(row=row,
+                                                      column=1, pady=10)
       self.fields[field] = value
       row += 1
     leagueday = tk.Checkbutton( self.trxnframe,
@@ -487,22 +478,13 @@ class SYTMembers(tk.Tk):
                           bg=SYTMembers.rgb_bg)
     rightframe.grid(row=1, column=1, sticky='W', padx=(5,0))
     for row, field in enumerate(member):
-      tk.Label( leftframe,
-                text=field,
-                bg=SYTMembers.rgb_bg,
-                fg='black',
-                font=SYTMembers.font_regular(16)
-              ).grid(row=row, column=0, pady=3)
+      self.label(leftframe, text=field).grid(row=row, column=0, pady=3)
       value = tk.StringVar(rightframe, str(member[field]))
-      tk.Entry( rightframe,
-                state=('disabled' \
-                        if field in self.db.memberprotected \
-                        else 'normal'),
-                bg=SYTMembers.rgb_bg,
-                disabledbackground=SYTMembers.rgb_bg,
-                disabledforeground='#424242',
-                font=SYTMembers.font_regular(15),
-                textvariable=value).grid(row=row, columns=1, pady=3)
+      self.entry(rightframe,
+                  textvariable=value,
+                  state='disabled' if field in self.db.memberprotected \
+                        else 'normal'
+                ).grid(row=row, columns=1, pady=3)
       self.fields[field] = value
     botframe = tk.Frame(self.editmemberframe,
                         width=SYTMembers.width,
