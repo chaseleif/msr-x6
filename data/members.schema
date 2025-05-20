@@ -3,11 +3,11 @@ CREATE TABLE members (
   "Member ID" INTEGER NOT NULL PRIMARY KEY,
   "Activation" INTEGER NOT NULL,
   "Expiration" INTEGER NOT NULL,
-  "Cards issued" INTEGER DEFAULT 0,
+  "Cards Issued" INTEGER DEFAULT 0,
   "Active" INTEGER DEFAULT 1,
-  "Phone number" TEXT,
+  "Phone Number" TEXT,
   "Birthday" TEXT,
-  "Last day" INTEGER NOT NULL DEFAULT 0,
-  "Last swipe" INTEGER NOT NULL DEFAULT 0,
-  "Daily swipes" INTEGER NOT NULL DEFAULT 0
+  "Last Day" INTEGER NOT NULL DEFAULT 0,
+  "Last Swipe" INTEGER NOT NULL DEFAULT 0,
+  "Daily Swipes" INTEGER NOT NULL DEFAULT 0
 )

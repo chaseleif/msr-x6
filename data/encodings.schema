@@ -1,6 +1,6 @@
 CREATE TABLE cards (
   "Member ID" INTEGER NOT NULL,
-  "Card number" INTEGER NOT NULL,
-  "Encoding time" INTEGER NOT NULL PRIMARY KEY,
-  "Deactivation time" INTEGER DEFAULT 0
+  "Card Number" INTEGER NOT NULL,
+  "Encoding Time" INTEGER NOT NULL PRIMARY KEY,
+  "Deactivation Time" INTEGER DEFAULT 0
 )
