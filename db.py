@@ -24,8 +24,8 @@ class DataBase:
                                   in enumerate(self.memberdefaults.keys()) \
                                   if field in ( 'Activation',
                                                 'Expiration'
-                                                'Last day',
-                                                'Last swipe')
+                                                'Last Day',
+                                                'Last Swipe')
                                 )
     try:
       self.encodingsdb = os.path.join(sys._MEIPASS, encodingsdb)
@@ -85,10 +85,10 @@ class DataBase:
       return None
     for card in cards:
       print(f'{card=}')
-      if card['Encoding time'] == int(membertracks[2]):
-        if card['Deactivation time'] == 0:
+      if card['Encoding Time'] == int(membertracks[2]):
+        if card['Deactivation Time'] == 0:
           print('Card hasn\'t been deactivated')
-          if card['Card number'] != int(membertracks[1]):
+          if card['Card Number'] != int(membertracks[1]):
             return 'Card doesn\'t appear to be deactivated but is corrupted'
           break
         deactivation = self.epoch2str(card['Deactivation time'])
