@@ -36,11 +36,11 @@ for field in schema:
   print()
 '''
 
-with sqlite3.connect('trxn.db') as conn:
+with sqlite3.connect('encodings.db') as conn:
   curs = conn.cursor()
-  curs.execute('PRAGMA table_info(transactions)')
+  curs.execute('PRAGMA table_info(cards)')
   schema = curs.fetchall()
-  curs.execute('SELECT * from transactions')
+  curs.execute('SELECT * from cards')
   transactions = curs.fetchall()
 
 print(schema)

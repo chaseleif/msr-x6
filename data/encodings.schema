@@ -1,0 +1,6 @@
+CREATE TABLE cards (
+  "Time" INTEGER NOT NULL PRIMARY KEY,
+  "Member ID" INTEGER NOT NULL,
+  "Card number" INTEGER NOT NULL,
+  "Card ID" INTEGER NOT NULL
+)

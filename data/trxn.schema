@@ -1,7 +1,0 @@
-CREATE TABLE transactions (
-  "Time" INTEGER NOT NULL PRIMARY KEY,
-  "Member ID" INTEGER NOT NULL,
-  "League day" INTEGER NOT NULL DEFAULT 0,
-  "Total spent" REAL NOT NULL DEFAULT 0,
-  "Total hours" REAL NOT NULL DEFAULT 0
-)
