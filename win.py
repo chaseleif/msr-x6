@@ -28,7 +28,10 @@ class SYTMembers(tk.Tk):
   def __init__(self):
     super().__init__()
     self.title('SYT Sport Bar & Pool Hall Members')
-    self.geometry(f'{SYTMembers.width}x{SYTMembers.height}')
+    geometry = f'{SYTMembers.width}x{SYTMembers.height}'
+    geometry += f'+{round(self.winfo_screenwidth()/2 - SYTMembers.width/2)}'
+    geometry += f'+{round(self.winfo_screenheight()/2 - SYTMembers.height/2)}'
+    self.geometry(geometry)
     self.frames = []
     for frame in ('mainframe',
                   'trxnframe',
@@ -79,19 +82,16 @@ class SYTMembers(tk.Tk):
   def label(self, frame,
             text=None, textvariable=None,
             fg='black', size=16):
+    params = { 'bg':SYTMembers.rgb_bg, 'fg':fg }
+    if fg == 'black':
+      params['font'] = SYTMembers.font_regular(size)
+    else:
+      params['font'] = SYTMembers.font_bold(size)
     if textvariable is None:
-      return tk.Label(frame,
-                      text=text,
-                      bg=SYTMembers.rgb_bg,
-                      fg=fg,
-                      font=SYTMembers.font_regular(size) if fg=='black' \
-                          else SYTMembers.font_bold(size))
-    return tk.Label(frame,
-                    textvariable=textvariable,
-                    bg=SYTMembers.rgb_bg,
-                    fg=fg,
-                    font=SYTMembers.font_regular(size) if fg=='black' \
-                          else SYTMembers.font_bold(size))
+      params['text'] = text
+    else:
+      params['textvariable'] = textvariable
+    return tk.Label(frame, **params)
 
   def entry(self, frame, text=None, textvariable=None, state='normal'):
     if textvariable is None:
@@ -288,7 +288,6 @@ class SYTMembers(tk.Tk):
                 self.paint_main
                 ).grid(row=2 if member is None else 3,
                         column=0, columnspan=2, pady=10)
-    self.eval('tk::PlaceWindow . center')
 
   def find_selection(self, membertree):
     if membertree.selection():
@@ -397,7 +396,6 @@ class SYTMembers(tk.Tk):
     errorlabel.grid(row=2, column=0, pady=10)
     self.errortext.trace_add('write', callback=self.swipe_error_callback)
     self.tracktext.trace_add('write', callback=self.read_callback)
-    self.eval('tk::PlaceWindow . center')
 
   def paint_trxn(self, member, msg=None):
     titleframe = self.raisetitlegrid(self.trxnframe, columns=2)
@@ -449,7 +447,6 @@ class SYTMembers(tk.Tk):
                 'Return to Home Screen',
                 self.paint_main
                 ).grid(row=row, column=0, columnspan=2, pady=10)
-    self.eval('tk::PlaceWindow . center')
 
   def paint_main(self):
     titleframe = self.raisetitlegrid(self.mainframe)
@@ -467,30 +464,25 @@ class SYTMembers(tk.Tk):
                   button,
                   lambda button=button: buttons[button]()
                   ).grid(row=row, column=0, pady=20)
-    self.eval('tk::PlaceWindow . center')
 
   def paint_editmember(self, member):
     titleframe = self.raisetitlegrid(self.editmemberframe, columns=2)
-    leftframe = tk.Frame(self.editmemberframe,
-                          width=SYTMembers.width/2,
-                          height=SYTMembers.height,
-                          bg=SYTMembers.rgb_bg)
-    leftframe.grid(row=1, column=0, sticky='E', padx=(0,5))
-    rightframe = tk.Frame(self.editmemberframe,
-                          width=SYTMembers.width/2,
-                          height=SYTMembers.height,
-                          bg=SYTMembers.rgb_bg)
-    rightframe.grid(row=1, column=1, sticky='W', padx=(5,0))
+    detailsframe = tk.Frame(self.editmemberframe,
+                            width=SYTMembers.width,
+                            height=SYTMembers.height,
+                            bg=SYTMembers.rgb_bg)
+    detailsframe.grid(row=1, column=0, columnspan=2, padx=5)
     for row, field in enumerate(member):
-      self.label( leftfriame,
-                  text=field,
-                  size=14).grid(row=row, column=0, pady=0)
-      value = tk.StringVar(rightframe, str(member[field]))
-      self.entry(rightframe,
+      label = self.label( detailsframe,
+                          text=field,
+                          size=14)
+      label.grid(row=row, column=0, pady=2, padx=(0,4), sticky='e')
+      value = tk.StringVar(detailsframe, str(member[field]))
+      self.entry( detailsframe,
                   textvariable=value,
                   state='disabled' if field in self.db.memberprotected \
                         else 'normal'
-                ).grid(row=row, columns=1, pady=(1,0))
+                ).grid(row=row, column=1, pady=1, padx=(4,0))
       self.fields[field] = value
     botframe = tk.Frame(self.editmemberframe,
                         width=SYTMembers.width,
@@ -505,7 +497,6 @@ class SYTMembers(tk.Tk):
                   button,
                   lambda button=button: buttons[button]()
                   ).grid(row=row, column=0, columnspan=2, pady=10)
-    self.eval('tk::PlaceWindow . center')
 
 if __name__=='__main__':
   window = SYTMembers()
