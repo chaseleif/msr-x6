@@ -23,7 +23,7 @@ class DataBase:
     self.member_timeidx = tuple(idx for idx,field \
                                   in enumerate(self.memberdefaults.keys()) \
                                   if field in ( 'Activation',
-                                                'Expiration'
+                                                'Expiration',
                                                 'Last Day',
                                                 'Last Swipe')
                                 )
