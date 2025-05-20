@@ -333,7 +333,7 @@ class SYTMembers(tk.Tk):
     self.swipe.start()
 
   def writeswipe(self, button):
-    tracks = self.db.newmember2tracks(self.member)
+    tracks = self.db.member2tracks(self.member)
     self.swipe = SwipeThread( tracks=tracks,
                               db=self.db,
                               errortext=self.errortext,

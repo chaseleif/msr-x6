@@ -43,7 +43,13 @@ class DataBase:
       return 'Never'
     ts = localtime(ts)
     s = f'{ts.tm_mon}/{ts.tm_mday}/{ts.tm_year} '
-    s += f'{ts.tm_hour-12 if ts.tm_hour>12 else ts.tm_hour}:{ts.tm_min:02d}'
+    if ts.tm_hour > 12:
+      s += f'{ts.tm_hour-12}'
+    elif ts.tm_hour == 0:
+      s += '12'
+    else:
+      s += f'{ts.tm_hour}'
+    s += f':{ts.tm_min:02d}'
     s += 'AM' if ts.tm_hour < 12 else 'PM'
     return s
 
@@ -75,7 +81,7 @@ class DataBase:
         self.epoch2str(member[list(self.memberdefaults.keys())[idx]])
     return member
 
-  def newmember2tracks(self, memberid):
+  def member2tracks(self, memberid):
     with sqlite3.connect(self.encodingsdb) as conn:
       curs = conn.cursor()
       curs.execute( f'SELECT MAX("Card Number") FROM cards ' + \
