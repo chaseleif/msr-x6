@@ -94,23 +94,17 @@ class SYTMembers(tk.Tk):
     return tk.Label(frame, **params)
 
   def entry(self, frame, text=None, textvariable=None, state='normal'):
+    params = {'bg':SYTMembers.rgb_bg,
+              'fg':'black',
+              'disabledbackground':SYTMembers.rgb_bg,
+              'disabledforeground':'#424242',
+              'state':state,
+              'font':SYTMembers.font_regular(15)}
     if textvariable is None:
-      return tk.Entry(frame,
-                      text=text,
-                      bg=SYTMembers.rgb_bg,
-                      fg='black',
-                      disabledbackground=SYTMembers.rgb_bg,
-                      disabledforeground='#424242',
-                      state=state,
-                      font=SYTMembers.font_regular(15))
-    return tk.Entry(frame,
-                    textvariable=textvariable,
-                    bg=SYTMembers.rgb_bg,
-                    fg='black',
-                    disabledbackground=SYTMembers.rgb_bg,
-                    disabledforeground='#424242',
-                    state=state,
-                    font=SYTMembers.font_regular(15))
+      params['text'] = text
+    else:
+      params['textvariable'] = textvariable
+    return tk.Entry(frame, **params)
 
   def process_trxn(self):
     for field in self.fields:
