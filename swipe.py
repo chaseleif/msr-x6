@@ -4,15 +4,22 @@ import threading
 from msr import MSRX6
 
 class SwipeThread:
-  def __init__(self, tracks=None, errortext=None, tracktext=None):
+  def __init__(self, tracks=None, db=None, errortext=None, tracktext=None):
     super().__init__()
     self.sigcancel = threading.Event()
     self.thread = threading.Thread(target=self.idle,
                                     args=(self.sigcancel,
                                           tracks,
+                                          db,
                                           errortext,
                                           tracktext))
 
+  ''' setmsg
+      Helper function to set the text of a tkinter textvariable
+      If a textvariable has gone out of scope set() will raise an Exception
+
+      Returns True if able to set the text, otherwise False
+  '''
   def setmsg(self, text, msg):
     try:
       text.set(msg)
@@ -25,6 +32,7 @@ class SwipeThread:
       
       Arguments:
         tracks is None or a list of 3 strings
+        db is None or a reference to the DataBase instance
         errortext is a reference to the tkinter errortext variable
         tracktext is a reference to the tkinter tracktext variable
 
@@ -36,33 +44,45 @@ class SwipeThread:
 
       Returns True to indicate not to retry, either on success or fatal error
   '''
-  def swipe(self, tracks, errortext, tracktext):
+  def swipe(self, tracks, db, errortext, tracktext):
     with MSRX6() as msr:
       msr.connect()
+      # Error connecting to device, communication error or not found
       if msr.errormsg:
         self.setmsg(errortext, msr.errormsg)
         return True
+      # No tracks given, we are reading
       if tracks is None:
         tracks = msr.read_tracks()
+        # Set the corresponding textvariable to the error message on error
         if msr.errormsg:
+          # On failure to set the textvariable return True to quit the thread
           if not self.setmsg(errortext, msr.errormsg):
             return True
+          # Return False to retry
           return False
+        # We did not receive a response, i.e., no swipe
         if tracks is None:
           return False
+        # Pass the tracks along to the tracktext variable
         self.setmsg(tracktext, '&'.join(tracks))
         return True
+      # We are writing tracks to a card
       msr.write_tracks(tracks)
+      # Handle an error message as with reading
       if msr.errormsg:
         if not self.setmsg(errortext, msr.errormsg):
           return True
         return False
+      # Update the db on a successful write
+      db.encoded(tracks)
+      # and set the tracktext
       self.setmsg(tracktext, '&'.join(tracks))
       return True
 
-  def idle(self, sigcancel, tracks, errortext, tracktext):
+  def idle(self, sigcancel, tracks, db, errortext, tracktext):
     while not sigcancel.is_set():
-      if self.swipe(tracks, errortext, tracktext):
+      if self.swipe(tracks, db, errortext, tracktext):
         break
 
   def start(self):

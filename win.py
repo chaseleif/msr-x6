@@ -34,7 +34,7 @@ class SYTMembers(tk.Tk):
     self.geometry(geometry)
     self.frames = []
     for frame in ('mainframe',
-                  'trxnframe',
+                  'memberframe',
                   'swipeframe',
                   'findframe',
                   'findmemberframe',
@@ -333,9 +333,11 @@ class SYTMembers(tk.Tk):
     self.swipe.start()
 
   def writeswipe(self, button):
-    self.swipe = SwipeThread(errortext=self.errortext,
-                              tracktext=self.tracktext,
-                              tracks=[self.member,'0','0'])
+    tracks = self.db.newmember2tracks(self.member)
+    self.swipe = SwipeThread( tracks=tracks,
+                              db=self.db,
+                              errortext=self.errortext,
+                              tracktext=self.tracktext)
     button['state'] = tk.DISABLED
     self.swipe.start()
 
@@ -392,55 +394,54 @@ class SYTMembers(tk.Tk):
     self.tracktext.trace_add('write', callback=self.read_callback)
 
   def paint_trxn(self, member, msg=None):
-    titleframe = self.raisetitlegrid(self.trxnframe, columns=2)
+    titleframe = self.raisetitlegrid(self.memberframe, columns=2)
     if msg is not None:
       self.label( titleframe,
                   text=msg,
                   fg='dark blue'
                 ).grid(row=1, column=0, columnspan=2, pady=10)
     self.member = member
-    leftframe = tk.Frame( self.trxnframe,
-                          width=SYTMembers.width/2,
-                          height=SYTMembers.height,
-                          bg=SYTMembers.rgb_bg)
-    leftframe.grid(row=1, column=0, sticky='E', padx=(0,5))
-    rightframe = tk.Frame(self.trxnframe,
-                          width=SYTMembers.width/2,
-                          height=SYTMembers.height,
-                          bg=SYTMembers.rgb_bg)
-    rightframe.grid(row=1, column=1, sticky='W', padx=(5,0))
-    self.label(leftframe,
-                text=member['Name']).grid(row=0, column=0, pady=10)
-    self.label(rightframe,
-                text=member['Member ID']).grid(row=0, column=1, pady=10)
-    self.fields = { 'Total spent':None,
-                    'Total hours':None }
-    row = 1
-    for field in self.fields:
-      self.label(leftframe, text=field).grid(row=row, column=0, pady=10)
-      value = tk.StringVar(rightframe)
-      self.entry(rightframe, textvariable=value).grid(row=row,
-                                                      column=1, pady=10)
-      self.fields[field] = value
-      row += 1
-    leagueday = tk.Checkbutton( self.trxnframe,
-                                text='League day',
-                                variable=self.leagueday,
-                                bg=SYTMembers.rgb_bg,
-                                activebackground=SYTMembers.rgb_bg,
-                                cursor='hand2',
-                                font=SYTMembers.font_regular(16))
-    leagueday.grid(row=row, column=0, pady=10, columnspan=2)
-    row += 1
-    self.button(self.trxnframe,
-                'Process Transaction',
+    detailsframe = tk.Frame(self.memberframe,
+                            width=SYTMembers.width,
+                            height=SYTMembers.height,
+                            bg=SYTMembers.rgb_bg)
+    detailsframe.grid(row=1, column=0, columnspan=2)
+    for row, field in enumerate( ('Name',
+                                  'Member ID',
+                                  'Activation',
+                                  'Expiration',
+                                  'Cards Issued',
+                                  'Birthday',
+                                  'Last Day',
+                                  'Last Swipe',
+                                  'Daily Swipes')):
+      if member[field] is None:
+        continue
+      label = self.label(detailsframe, text=field + ':')
+      label.grid(row=row, column=0, padx=(0,3), pady=5, sticky='E')
+      value = self.label(detailsframe, text=member[field])
+      value.grid(row=row, column=1, padx=(3,0), pady=5, sticky='W')
+    botframe = tk.Frame(self.memberframe,
+                        width=SYTMembers.width,
+                        height=SYTMembers.height,
+                        bg=SYTMembers.rgb_bg)
+    botframe.grid(row=2, column=0, columnspan=2)
+    self.button(botframe,
+                'Extend Membership' if member['Active'] == 1 \
+                  else 'Activate Membership',
+                self.process_trxn).grid(row=0, column=0, pady=10)
+    self.button(botframe,
+                'Issue New Card',
                 self.process_trxn
-                ).grid(row=row, column=0, columnspan=2, pady=10)
-    row += 1
-    self.button(self.trxnframe,
+                ).grid(row=1, column=0, pady=10)
+    self.button(botframe,
+                'Re-encode Card',
+                self.process_trxn
+                ).grid(row=2, column=0, pady=10)
+    self.button(botframe,
                 'Return to Home Screen',
                 self.paint_main
-                ).grid(row=row, column=0, columnspan=2, pady=10)
+                ).grid(row=3, column=0, pady=10)
 
   def paint_main(self):
     titleframe = self.raisetitlegrid(self.mainframe)

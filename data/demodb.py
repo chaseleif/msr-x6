@@ -32,18 +32,6 @@ for field in schema:
   print()
 '''
 
-with sqlite3.connect('encodings.db') as conn:
-  curs = conn.cursor()
-  curs.execute('PRAGMA table_info(cards)')
-  schema = curs.fetchall()
-  curs.execute('SELECT * from cards')
-  transactions = curs.fetchall()
-
-print(schema)
-for transaction in transactions:
-  for field, value in zip(schema, transaction):
-    print(field[1],'=',value)
-
 with sqlite3.connect('members.db') as conn:
   curs = conn.cursor()
   name = 'chase'
@@ -55,3 +43,15 @@ print(results)
 
 for result in results:
   print(result)
+
+with sqlite3.connect('encodings.db') as conn:
+  curs = conn.cursor()
+  curs.execute('PRAGMA table_info(cards)')
+  schema = curs.fetchall()
+  curs.execute('SELECT * from cards')
+  encodings = curs.fetchall()
+
+print(schema)
+for encoding in encodings:
+  for field, value in zip(schema, encoding):
+    print(field[1],'=',value)

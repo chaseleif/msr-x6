@@ -36,6 +36,7 @@ class DataBase:
       curs.execute('PRAGMA table_info(cards);')
       schema = curs.fetchall()
     self.encodingcols = tuple([col[1] for col in schema])
+    self.encodingcols = {col:idx for idx,col in enumerate(self.encodingcols)}
 
   def epoch2str(self, ts):
     if ts == 0:
@@ -74,6 +75,16 @@ class DataBase:
         self.epoch2str(member[list(self.memberdefaults.keys())[idx]])
     return member
 
+  def newmember2tracks(self, memberid):
+    with sqlite3.connect(self.encodingsdb) as conn:
+      curs = conn.cursor()
+      curs.execute( f'SELECT MAX("Card Number") FROM cards ' + \
+                    f'WHERE "Member ID"={memberid};')
+      cardnum = curs.fetchone()
+    cardnum = 1 if cardnum[0] is None else cardnum[0] + 1
+    encodetime = round(time())
+    return [memberid, str(cardnum), str(encodetime)]
+
   def verifymember(self, membertracks):
     with sqlite3.connect(self.encodingsdb) as conn:
       curs = conn.cursor()
@@ -84,14 +95,13 @@ class DataBase:
     if len(cards) == 0:
       return None
     for card in cards:
-      print(f'{card=}')
-      if card['Encoding Time'] == int(membertracks[2]):
-        if card['Deactivation Time'] == 0:
-          print('Card hasn\'t been deactivated')
-          if card['Card Number'] != int(membertracks[1]):
+      if card[self.encodingcols['Encoding Time']] == int(membertracks[2]):
+        if card[self.encodingcols['Deactivation Time']] == 0:
+          if card[self.encodingcols['Card Number']] != int(membertracks[1]):
             return 'Card doesn\'t appear to be deactivated but is corrupted'
           break
-        deactivation = self.epoch2str(card['Deactivation time'])
+        deactivation = card[self.encodingcols['Deactivation Time']]
+        deactivation = self.epoch2str(deactivation)
         return f'Card deactivated on {deactivation}'
     return None
 
@@ -167,41 +177,19 @@ class DataBase:
     now = mktime(struct_time(now))
     return round(now)
 
-  def encodings(self, transaction):
-    memberid = transaction['Member ID']
-    transaction['Time'] = round(time())
-    cmd = 'INSERT INTO transactions ('
-    for count, col in enumerate(transaction):
-      if count > 0:
-        cmd += ', '
-      cmd += f'"{col}"'
-    cmd += ') VALUES ('
-    for count, col in enumerate(transaction):
-      if transaction[col] == '':
-        transaction[col] = self.encodingsdefaults[col]
-      if count > 0:
-        cmd += ', '
-      cmd += f'"{transaction[col]}"'
-    cmd += ');'
+  def encoded(self, tracks):
+    deactivation = f'UPDATE cards SET "Deactivation Time"={tracks[2]} '
+    deactivation += f'WHERE "Member ID"={tracks[0]} AND "Deactivation Time"=0;'
+    activation = 'INSERT INTO cards ' + \
+                  '("Member ID", "Card Number", "Encoding Time") '
+    activation += f'VALUES({tracks[0]}, {tracks[1]}, {tracks[2]});'
     with sqlite3.connect(self.encodingsdb) as conn:
       curs = conn.cursor()
-      curs.execute(cmd)
+      curs.execute(deactivation)
+      curs.execute(activation)
       conn.commit()
-    now = self.startofday()
-    lastday, lastleagueday = self.lastmemberdays(memberid)
     with sqlite3.connect(self.memberdb) as conn:
       curs = conn.cursor()
-      cmd = 'UPDATE members SET "Transactions"="Transactions"+1'
-      if now > lastday:
-        cmd += ', "Days"="Days"+1'
-        cmd += f', "Last day"="{now}"'
-      if transaction['League day'] == 1 and now > lastleagueday:
-        cmd += ', "League days"="League days"+1'
-        cmd += f', "Last league day"="{now}"'
-      if float(transaction['Total spent']) > 0:
-        cmd += f', "Total spent"="Total spent"+{transaction["Total spent"]}'
-      if float(transaction['Total hours']) > 0:
-        cmd += f', "Total hours"="Total hours"+{transaction["Total hours"]}'
-      cmd += f' WHERE "Member ID"={memberid};'
-      curs.execute(cmd)
+      curs.execute( f'UPDATE members SET "Cards Issued"={tracks[1]} ' + \
+                    f'WHERE "Member ID"={tracks[0]}')
       conn.commit()
