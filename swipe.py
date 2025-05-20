@@ -20,7 +20,23 @@ class SwipeThread:
       return False
     return True
 
-  def swipe(self, sigcancel, tracks, errortext, tracktext):
+  ''' swipe
+      Thread action, performs a swipe request with MSRX6 to read or encode
+      
+      Arguments:
+        tracks is None or a list of 3 strings
+        errortext is a reference to the tkinter errortext variable
+        tracktext is a reference to the tkinter tracktext variable
+
+      If tracks is None then we are reading
+      Else tracks is a list of 3 strings conforming to ISO specs:
+        Track 1 <=  76 alphanumeric characters
+        Track 2 <=  37 numeric characters
+        Track 3 <= 104 numeric characters
+
+      Returns True to indicate not to retry, either on success or fatal error
+  '''
+  def swipe(self, tracks, errortext, tracktext):
     with MSRX6() as msr:
       msr.connect()
       if msr.errormsg:
@@ -46,7 +62,7 @@ class SwipeThread:
 
   def idle(self, sigcancel, tracks, errortext, tracktext):
     while not sigcancel.is_set():
-      if self.swipe(sigcancel, tracks, errortext, tracktext):
+      if self.swipe(tracks, errortext, tracktext):
         break
 
   def start(self):

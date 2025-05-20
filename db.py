@@ -8,7 +8,7 @@ class DataBase:
   idlength = 10
   def __init__(self,
                 memberdb=os.path.join('data', 'members.db'),
-                trxndb=os.path.join('data', 'trxn.db')):
+                encodingsdb=os.path.join('data', 'encodings.db')):
     try:
       self.memberdb = os.path.join(sys._MEIPASS, memberdb)
     except AttributeError:
@@ -23,19 +23,19 @@ class DataBase:
     self.member_timeidx = tuple(idx for idx,field \
                                   in enumerate(self.memberdefaults.keys()) \
                                   if field in ( 'Activation',
+                                                'Expiration'
                                                 'Last day',
-                                                'Last league day')
+                                                'Last swipe')
                                 )
     try:
-      self.trxndb = os.path.join(sys._MEIPASS, trxndb)
+      self.encodingsdb = os.path.join(sys._MEIPASS, encodingsdb)
     except AttributeError:
-      self.trxndb = trxndb
-    with sqlite3.connect(self.trxndb) as conn:
+      self.encodingsdb = encodingsdb
+    with sqlite3.connect(self.encodingsdb) as conn:
       curs = conn.cursor()
-      curs.execute('PRAGMA table_info(transactions);')
+      curs.execute('PRAGMA table_info(cards);')
       schema = curs.fetchall()
-    self.trxndefaults = {col[1]:col[4] for col in schema}
-    self.trxn_timeidx = list(self.trxndefaults.keys()).index('Time')
+    self.encodingcols = tuple([col[1] for col in schema])
 
   def epoch2str(self, ts):
     if ts == 0:
@@ -49,7 +49,7 @@ class DataBase:
   def findmember(self, query):
     with sqlite3.connect(self.memberdb) as conn:
       curs = conn.cursor()
-      curs.execute(f'SELECT * FROM members WHERE "Name" LIKE "%{query}%"')
+      curs.execute(f'SELECT * FROM members WHERE "Name" LIKE "%{query}%";')
       results = curs.fetchall()
     for i in range(len(results)):
       results[i] = tuple( self.epoch2str(field)
@@ -74,6 +74,27 @@ class DataBase:
         self.epoch2str(member[list(self.memberdefaults.keys())[idx]])
     return member
 
+  def verifymember(self, membertracks):
+    with sqlite3.connect(self.encodingsdb) as conn:
+      curs = conn.cursor()
+      curs.execute(f'SELECT * FROM cards WHERE "Member ID"={membertracks[0]};')
+      cards = curs.fetchall()
+    if len(cards) == 0:
+      return f'No cards have been issued for Member ID {membertracks[0]}'
+    if len(cards) == 0:
+      return None
+    for card in cards:
+      print(f'{card=}')
+      if card['Encoding time'] == int(membertracks[2]):
+        if card['Deactivation time'] == 0:
+          print('Card hasn\'t been deactivated')
+          if card['Card number'] != int(membertracks[1]):
+            return 'Card doesn\'t appear to be deactivated but is corrupted'
+          break
+        deactivation = self.epoch2str(card['Deactivation time'])
+        return f'Card deactivated on {deactivation}'
+    return None
+
   def generatememberid(self):
     with sqlite3.connect(self.memberdb) as conn:
       member = [1]
@@ -88,18 +109,21 @@ class DataBase:
   def addmember(self, member):
     member['Member ID'] = self.generatememberid()
     member['Activation'] = round(time())
-    cmd = 'INSERT INTO members ("Member ID",Name,Activation'
+    expiration = localtime(time())
+    expiration = (expiration.tm_year+1, expiration.tm_mon,
+                  expiration.tm_mday+1,
+                  0, 0, 0, 0, 0, -1)
+    expiration = mktime(struct_time(expiration))
+    member['Expiration'] = expiration
+    cmd = 'INSERT INTO members ("Member ID"'
+    #',Name,Activation,Expiration'
     for field in member:
-      if field in ('Member ID','Name','Activation') or member[field] == '':
+      if field == 'Member ID' or member[field] == '':
         continue
       cmd += f',"{field}"'
-    cmd += ') VALUES('
-    for i, field in enumerate(('Member ID','Name','Activation')):
-      if i > 0:
-        cmd += ','
-      cmd += f'"{member[field]}"'
+    cmd += f') VALUES("{member["Member ID"]}"'
     for field in member:
-      if field in ('Member ID','Name','Activation') or member[field] == '':
+      if field == 'Member ID' or member[field] == '':
         continue
       cmd += f',"{member[field]}"'
     cmd += ');'
@@ -143,20 +167,7 @@ class DataBase:
     now = mktime(struct_time(now))
     return round(now)
 
-  def lastmemberdays(self, memberid):
-    with sqlite3.connect(self.memberdb) as conn:
-      curs = conn.cursor()
-      cmd = f'SELECT "Last day" from members ' + \
-            f'WHERE "Member ID"={memberid};'
-      curs.execute(cmd)
-      lastday = curs.fetchall()[0][0]
-      cmd = f'SELECT "Last day" from members ' + \
-            f'WHERE "Member ID"={memberid};'
-      curs.execute(cmd)
-      lastleagueday = curs.fetchall()[0][0]
-    return lastday, lastleagueday
-
-  def trxn(self, transaction):
+  def encodings(self, transaction):
     memberid = transaction['Member ID']
     transaction['Time'] = round(time())
     cmd = 'INSERT INTO transactions ('
@@ -167,12 +178,12 @@ class DataBase:
     cmd += ') VALUES ('
     for count, col in enumerate(transaction):
       if transaction[col] == '':
-        transaction[col] = self.trxndefaults[col]
+        transaction[col] = self.encodingsdefaults[col]
       if count > 0:
         cmd += ', '
       cmd += f'"{transaction[col]}"'
     cmd += ');'
-    with sqlite3.connect(self.trxndb) as conn:
+    with sqlite3.connect(self.encodingsdb) as conn:
       curs = conn.cursor()
       curs.execute(cmd)
       conn.commit()

@@ -353,10 +353,14 @@ class SYTMembers(tk.Tk):
     fn()
 
   def read_callback(self, var, index, mode):
-    memberid = self.tracktext.get().split('&')[0]
-    member = self.db.getmember(memberid)
+    membertracks = self.tracktext.get().split('&')
+    member = self.db.getmember(membertracks[0])
     if member is None:
-      self.paint_swipe(errortext=f'Invalid member ID: {memberid}')
+      self.paint_swipe(errortext=f'Invalid member ID: {membertracks[0]}')
+      return
+    error = self.db.verifymember(membertracks)
+    if error is not None:
+      self.paint_swipe(errortext=error)
       return
     self.paint_trxn(member)
 
