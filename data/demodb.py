@@ -6,12 +6,8 @@ try:
   with sqlite3.connect('members.db') as conn:
     curs = conn.cursor()
     for i in range(20):
-      curs.execute('INSERT INTO members ("Member ID","Name","Activation")' + \
-                      f'VALUES(51{i}013503246,"Chase LP",{round(time())})')
-    curs.execute('INSERT INTO members ("Member ID","Name","Activation")' + \
-                    f'VALUES(98765,"Chase Phelps",{round(time())+1})')
-    curs.execute('INSERT INTO members ("Member ID","Name","Activation")' + \
-                    f'VALUES(9876335,"Chaseleif",{round(time())+1})')
+      curs.execute('INSERT INTO members ("Member ID","Name","Activation","Expiration")' + \
+                      f'VALUES(51{i}013503246,"Chase LP",{round(time())},{i})')
     conn.commit()
 except sqlite3.IntegrityError:
   pass
@@ -50,9 +46,9 @@ for transaction in transactions:
 
 with sqlite3.connect('members.db') as conn:
   curs = conn.cursor()
-  name = 'Chase'
-  curs.execute('SELECT * from members')
-  #curs.execute(f'SELECT * from members WHERE "Name" LIKE "%{name}%"')
+  name = 'chase'
+  #curs.execute('SELECT * from members')
+  curs.execute(f'SELECT * from members WHERE "Name" LIKE "%{name}%"')
   results = curs.fetchall()
 
 print(results)
