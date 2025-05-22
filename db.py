@@ -14,7 +14,11 @@ class DataBase:
     except AttributeError:
       self.memberdb = memberdb
     with sqlite3.connect(self.memberdb) as conn:
+      now = round(time())
+      cmd = f'UPDATE members SET Active=0 WHERE Expiration<{now};'
       curs = conn.cursor()
+      curs.execute(cmd)
+      conn.commit()
       curs.execute('PRAGMA table_info(members);')
       schema = curs.fetchall()
     self.memberprotected = tuple(col[1] for col in schema if col[3] == 1)
@@ -76,6 +80,12 @@ class DataBase:
       curs.execute('PRAGMA table_info(members);')
       schema = curs.fetchall()
     member = {field[1]:value for field,value in zip(schema,member[0])}
+    if member['Active'] == 1 and member['Expiration'] < time():
+      cmd = f'UPDATE members SET Active=0 WHERE "Member ID"={memberid};'
+      with sqlite3.connect(self.memberdb) as conn:
+        curs = conn.cursor()
+        curs.execute(cmd)
+        curs.commit()
     for idx in self.member_timeidx:
       member[list(self.memberdefaults.keys())[idx]] = \
         self.epoch2str(member[list(self.memberdefaults.keys())[idx]])
@@ -98,8 +108,6 @@ class DataBase:
       cards = curs.fetchall()
     if len(cards) == 0:
       return f'No cards have been issued for Member ID {membertracks[0]}'
-    if len(cards) == 0:
-      return None
     for card in cards:
       if card[self.encodingcols['Encoding Time']] == int(membertracks[2]):
         if card[self.encodingcols['Deactivation Time']] == 0:
@@ -128,11 +136,10 @@ class DataBase:
     expiration = localtime(time())
     expiration = (expiration.tm_year+1, expiration.tm_mon,
                   expiration.tm_mday+1,
-                  0, 0, 0, 0, 0, -1)
+                  7, 0, 0, 0, 0, -1)
     expiration = mktime(struct_time(expiration))
     member['Expiration'] = expiration
     cmd = 'INSERT INTO members ("Member ID"'
-    #',Name,Activation,Expiration'
     for field in member:
       if field == 'Member ID' or member[field] == '':
         continue
@@ -148,6 +155,47 @@ class DataBase:
       curs.execute(cmd)
       conn.commit()
     return member
+
+  def membercheckin(self, memberid):
+    today = localtime(time())
+    today = (today.tm_year, today.tm_mon, today.tm_mday, 0, 0, 0, 0, 0, -1)
+    today = mktime(struct_time(today))
+    with sqlite3.connect(self.memberdb) as conn:
+      curs = conn.cursor()
+      curs.execute( 'SELECT "Last Day", "Last Swipe", "Daily Swipes"' + \
+                    f'FROM members WHERE "Member ID"={memberid};')
+      swipeinfo = curs.fetchall()[0]
+    dailyswipes = 1 if swipeinfo[0] < today else swipeinfo[2]+1
+    with sqlite3.connect(self.memberdb) as conn:
+      curs = conn.cursor()
+      curs.execute(f'UPDATE members SET "Last Day"={today}, ' + \
+                    f'"Last Swipe"={round(time())}, ' + \
+                    f'"Daily Swipes"={dailyswipes} ' + \
+                    f'WHERE "Member ID"={memberid};')
+      conn.commit()
+    if swipeinfo[0] == 0:
+      return ('Never', 0)
+    if swipeinfo[0] < today:
+      return (self.epoch2str(swipeinfo[1]), 0)
+    return (self.epoch2str(swipeinfo[1]), swipeinfo[2])
+
+  def renewmember(self, memberid):
+    with sqlite3.connect(self.memberdb) as conn:
+      curs = conn.cursor()
+      curs.execute( 'SELECT Expiration FROM members ' + \
+                    f'WHERE "Member ID"={memberid};')
+      expiration = curs.fetchall()[0][0]
+    expiration = localtime(max(round(time()), expiration))
+    expiration = (expiration.tm_year+1, expiration.tm_mon,
+                  expiration.tm_mday+1,
+                  7, 0, 0, 0, 0, -1)
+    expiration = mktime(struct_time(expiration))
+    cmd = f'UPDATE members SET Expiration={expiration}, Active=1 ' + \
+          f'WHERE "Member ID"={memberid};'
+    with sqlite3.connect(self.memberdb) as conn:
+      curs = conn.cursor()
+      curs.execute(cmd)
+      conn.commit()
 
   def deletemember(self, member):
     with sqlite3.connect(self.memberdb) as conn:

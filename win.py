@@ -34,7 +34,9 @@ class SYTMembers(tk.Tk):
     self.geometry(geometry)
     self.frames = []
     for frame in ('mainframe',
+                  'confirmframe',
                   'memberframe',
+                  'checkinframe',
                   'swipeframe',
                   'findframe',
                   'findmemberframe',
@@ -106,13 +108,9 @@ class SYTMembers(tk.Tk):
       params['textvariable'] = textvariable
     return tk.Entry(frame, **params)
 
-  def process_trxn(self):
-    for field in self.fields:
-      self.fields[field] = self.fields[field].get()
-    self.fields['Member ID'] = self.member['Member ID']
-    self.fields['League day'] = 1 if self.leagueday.get() else 0
-    self.db.trxn(self.fields)
-    self.paint_trxn(self.member, msg='Transactions updated')
+  def renew_member(self):
+    self.db.renewmember(self.member['Member ID'])
+    self.paint_member(self.member, msg='Membership Renewed')
 
   def windowtitle(self, frame):
     titleframe = tk.Frame(frame,
@@ -217,7 +215,7 @@ class SYTMembers(tk.Tk):
                     lambda: self.find_selection(membertree)
                     ).grid(row=2, column=0, columnspan=2, pady=10)
     self.button(botframe,
-                'Return to Home Screen',
+                'Return Home',
                 self.paint_main
                 ).grid(row=1 if query is None \
                               else 2 if len(results)==0 \
@@ -278,7 +276,7 @@ class SYTMembers(tk.Tk):
                   lambda: self.delete_member(member)
                   ).grid(row=2, column=0, columnspan=2, pady=10)
     self.button(botframe,
-                'Return to Home Screen',
+                'Return Home',
                 self.paint_main
                 ).grid(row=2 if member is None else 3,
                         column=0, columnspan=2, pady=10)
@@ -347,6 +345,21 @@ class SYTMembers(tk.Tk):
       self.swipe = None
     fn()
 
+  def checkin_callback(self, var, index, mode):
+    membertracks = self.tracktext.get().split('&')
+    member = self.db.getmember(membertracks[0])
+    if member is None:
+      self.paint_checkin(errortext=f'Invalid Member ID: {membertracks[0]}')
+      return
+    error = self.db.verifymember(membertracks)
+    if error is not None:
+      self.paint_checkin(errortext=error)
+    else:
+      self.paint_checkin(memberid=membertracks[0])
+
+  def checkin_error_callback(self, var, index, mode):
+    self.paint_checkin(errortext=self.errortext.get())
+
   def read_callback(self, var, index, mode):
     membertracks = self.tracktext.get().split('&')
     member = self.db.getmember(membertracks[0])
@@ -354,15 +367,68 @@ class SYTMembers(tk.Tk):
       self.paint_swipe(errortext=f'Invalid member ID: {membertracks[0]}')
       return
     error = self.db.verifymember(membertracks)
-    if error is not None:
-      self.paint_swipe(errortext=error)
-      return
-    self.paint_trxn(member)
+    self.paint_member(member, msg=error)
 
   def swipe_error_callback(self, var, index, mode):
     if self.errortext.get() == 'MSR X6 card reader/writer not found':
       self.paint_swipe( errortext=self.errortext.get(),
                         memberid=self.member)
+
+  def paint_confirm(self, msg):
+    titleframe = self.raisetitlegrid(self.confirmframe)
+    bodyframe = tk.Frame( self.confirmframe,
+                          width=SYTMembers.width,
+                          height=SYTMembers.height,
+                          bg=SYTMembers.rgb_bg)
+    bodyframe.grid(row=1, column=0)
+    for row, line in enumerate(msg.split('\n')):
+      self.label( bodyframe,
+                  text=line).grid(row=row, column=0, pady=5)
+    botframe = tk.Frame(self.confirmframe,
+                        width=SYTMembers.width,
+                        height=SYTMembers.height,
+                        bg=SYTMembers.rgb_bg)
+    botframe.grid(row=2, column=0)
+    self.button(botframe,
+                'Return Home',
+                self.paint_main).grid(row=0, column=0, pady=10)
+
+
+  def paint_checkin(self, memberid=None, errortext=''):
+    titleframe = self.raisetitlegrid(self.checkinframe)
+    if errortext != '':
+      self.errortext.set(errortext)
+    bodyframe = tk.Frame( self.checkinframe,
+                          width=SYTMembers.width,
+                          height=SYTMembers.height,
+                          bg=SYTMembers.rgb_bg)
+    bodyframe.grid(row=1, column=0)
+    if memberid is not None:
+      lastswipe = self.db.membercheckin(memberid=memberid)
+      lastswipe = [str(part) for part in lastswipe]
+      msg = '\n'.join(['Checked in',
+                        f'Last checkin: {lastswipe[0]}',
+                        f'Prior checkins today: {lastswipe[1]}'])
+      self.paint_confirm(msg)
+      return
+    self.swipebutton = self.button( bodyframe,
+                                    'Swipe',
+                                    None)
+    self.swipebutton.grid(row=0, column=0, pady=10)
+    self.button(bodyframe,
+                'Return Home',
+                lambda: self.swipecancel(self.paint_main)
+                ).grid(row=1, column=0, pady=10)
+    errorlabel = self.label(bodyframe,
+                            textvariable=self.errortext,
+                            fg='red')
+    errorlabel.grid(row=2, column=0, pady=10)
+    self.errortext.trace_add('write', callback=self.swipe_error_callback)
+    self.tracktext.trace_add('write', callback=self.checkin_callback)
+    if errortext == '':
+      self.readswipe(self.swipebutton)
+    else:
+      self.swipebutton['command'] = lambda: self.readswipe(self.swipebutton)
 
   def paint_swipe(self, errortext='', memberid=None):
     titleframe = self.raisetitlegrid(self.swipeframe)
@@ -378,10 +444,6 @@ class SYTMembers(tk.Tk):
                                     'Swipe',
                                     None)
     self.swipebutton.grid(row=0, column=0, pady=10)
-    if memberid is None:
-      self.swipebutton['command'] = lambda: self.readswipe(self.swipebutton)
-    else:
-      self.swipebutton['command'] = lambda: self.writeswipe(self.swipebutton)
     self.button(bodyframe,
                 'Cancel',
                 lambda: self.swipecancel(self.paint_main)
@@ -392,14 +454,26 @@ class SYTMembers(tk.Tk):
     errorlabel.grid(row=2, column=0, pady=10)
     self.errortext.trace_add('write', callback=self.swipe_error_callback)
     self.tracktext.trace_add('write', callback=self.read_callback)
+    if errortext == '':
+      if memberid is None:
+        self.readswipe(self.swipebutton)
+      else:
+        self.writeswipe(self.swipebutton)
+    else:
+      if memberid is None:
+        self.swipebutton['command'] = lambda: self.readswipe(self.swipebutton)
+      else:
+        self.swipebutton['command'] = lambda: self.writeswipe(self.swipebutton)
 
-  def paint_trxn(self, member, msg=None):
+  def paint_member(self, member, msg=None):
     titleframe = self.raisetitlegrid(self.memberframe, columns=2)
     if msg is not None:
       self.label( titleframe,
                   text=msg,
                   fg='dark blue'
                 ).grid(row=1, column=0, columnspan=2, pady=10)
+      if msg == 'Membership Renewed':
+        member = self.db.getmember(member['Member ID'])
     self.member = member
     detailsframe = tk.Frame(self.memberframe,
                             width=SYTMembers.width,
@@ -426,22 +500,21 @@ class SYTMembers(tk.Tk):
                         height=SYTMembers.height,
                         bg=SYTMembers.rgb_bg)
     botframe.grid(row=2, column=0, columnspan=2)
-    self.button(botframe,
-                'Extend Membership' if member['Active'] == 1 \
-                  else 'Activate Membership',
-                self.process_trxn).grid(row=0, column=0, pady=10)
-    self.button(botframe,
-                'Issue New Card',
-                self.process_trxn
-                ).grid(row=1, column=0, pady=10)
-    self.button(botframe,
-                'Re-encode Card',
-                self.process_trxn
-                ).grid(row=2, column=0, pady=10)
-    self.button(botframe,
-                'Return to Home Screen',
-                self.paint_main
-                ).grid(row=3, column=0, pady=10)
+    buttons = { 'Edit Member':
+                  lambda member=member: self.paint_editmember(member),
+                'Extend Membership' if int(member['Active']) == 1 \
+                                    else 'Reactivate Membership':
+                  self.renew_member,
+              }
+    if msg is not None and 'card' in msg.lower():
+      buttons['Issue New Card'] = \
+                    lambda: self.paint_swipe(memberid=str(member['Member ID']))
+    buttons['Return Home'] = self.paint_main
+    for row, button in enumerate(buttons):
+      self.button(botframe,
+                  button,
+                  lambda button=button: buttons[button]()
+                  ).grid(row=row, column=0, pady=10)
 
   def paint_main(self):
     titleframe = self.raisetitlegrid(self.mainframe)
@@ -450,7 +523,8 @@ class SYTMembers(tk.Tk):
                           height=SYTMembers.height,
                           bg=SYTMembers.rgb_bg)
     bodyframe.grid(row=1, column=0)
-    buttons = { 'Transaction': self.paint_swipe,
+    buttons = { 'Check In': self.paint_checkin,
+                'Swipe Member': self.paint_swipe,
                 'Search Members': self.paint_find,
                 'Create Member': self.paint_create,
               }
@@ -484,8 +558,14 @@ class SYTMembers(tk.Tk):
                         height=SYTMembers.height,
                         bg=SYTMembers.rgb_bg)
     botframe.grid(row=2, column=0, columnspan=2)
-    buttons = { 'Save': lambda: self.save_member(member),
-                'Return to Home Screen': self.paint_main,
+    buttons = { 'Save':
+                  lambda: self.save_member(member),
+                'Issue New Card':
+                  lambda: self.paint_swipe(memberid=str(member['Member ID'])),
+                'Check In':
+                  lambda: self.paint_member(member),
+                'Return Home':
+                  self.paint_main,
               }
     for row, button in enumerate(buttons):
       self.button(botframe,

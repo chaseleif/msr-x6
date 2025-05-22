@@ -22,17 +22,27 @@ class MSRX6:
       usb.util.dispose_resources(self.dev)
 
   def reset(self):
+    try:
+      self.hid.read(256, timeout=10)
+    except usb.core.USBTimeoutError:
+      pass
     self.send_message(b'\x1ba')
+    try:
+      self.hid.read(256, timeout=10)
+    except usb.core.USBTimeoutError:
+      pass
 
   def fail(self, msg=None):
     if msg:
       MSRX6.errormsg = msg
-    self.reset()
+    try:
+      self.reset()
+    except:
+      pass
     return None
 
   def clearbuffer(self):
     self.send_message(b'\x1br')
-    ret = self.recv_message(timeout=100)
     self.reset()
 
   def connect(self):
@@ -45,7 +55,10 @@ class MSRX6:
         self.dev.detach_kernel_driver(0)
     except NotImplementedError:
       pass
-    self.dev.set_configuration()
+    try:
+      self.dev.set_configuration()
+    except usb.core.USBError as e:
+      return self.fail(str(e))
     usb.util.claim_interface(self.dev, 0)
     config = self.dev.get_active_configuration()
     intf = config.interfaces()[0]
@@ -78,7 +91,10 @@ class MSRX6:
   def read_tracks(self):
     self.clearbuffer()
     self.send_message(b'\x1br')
-    ret = self.recv_message()
+    try:
+      ret = self.recv_message()
+    except usb.core.USBError as e:
+      return self.fail(str(e))
     if ret is None:
       return self.fail()
     if ret[0] != 0x1b:
