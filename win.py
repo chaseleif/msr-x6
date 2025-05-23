@@ -563,7 +563,7 @@ class SYTMembers(tk.Tk):
                 'Issue New Card':
                   lambda: self.paint_swipe(memberid=str(member['Member ID'])),
                 'Check In':
-                  lambda: self.paint_member(member),
+                  lambda: self.paint_checkin(memberid=str(member['Member ID'])),
                 'Return Home':
                   self.paint_main,
               }
