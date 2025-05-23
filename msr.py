@@ -79,7 +79,7 @@ class MSRX6:
                             wIndex=0,
                             data_or_wLength=message )
 
-  def recv_message(self, timeout=5000):
+  def recv_message(self, timeout=3000):
     try:
       message = bytes(self.hid.read(64, timeout=timeout))
     except usb.core.USBTimeoutError:

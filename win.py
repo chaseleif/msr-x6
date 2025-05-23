@@ -55,7 +55,7 @@ class SYTMembers(tk.Tk):
     self.fields = {}
     self.leagueday = tk.BooleanVar(value=False)
     self.member = None
-    self.swipe = None
+    self.swipe = SwipeThread()
     self.tracktext = tk.StringVar()
     self.errortext = tk.StringVar()
     self.stringvars = (self.tracktext, self.errortext)
@@ -65,8 +65,8 @@ class SYTMembers(tk.Tk):
     self.mainloop()
 
   def __del__(self):
-    if self.swipe is not None:
-      self.swipe.stop()
+    self.swipe.stop()
+    self.swipe.join()
     self.quit()
 
   def button(self, frame, text, command, state='normal'):
@@ -325,24 +325,19 @@ class SYTMembers(tk.Tk):
         widget.destroy()
 
   def readswipe(self, button):
-    self.swipe = SwipeThread(errortext=self.errortext,
-                              tracktext=self.tracktext)
     button['state'] = tk.DISABLED
-    self.swipe.start()
+    self.swipe.start(errortext=self.errortext, tracktext=self.tracktext)
 
   def writeswipe(self, button):
     tracks = self.db.member2tracks(self.member)
-    self.swipe = SwipeThread( tracks=tracks,
-                              db=self.db,
-                              errortext=self.errortext,
-                              tracktext=self.tracktext)
     button['state'] = tk.DISABLED
-    self.swipe.start()
+    self.swipe.start(tracks=tracks,
+                      db=self.db,
+                      errortext=self.errortext,
+                      tracktext=self.tracktext)
 
   def swipecancel(self, fn):
-    if self.swipe is not None:
-      self.swipe.stop()
-      self.swipe = None
+    self.swipe.stop()
     fn()
 
   def checkin_callback(self, var, index, mode):

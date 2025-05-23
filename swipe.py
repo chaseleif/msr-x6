@@ -4,15 +4,12 @@ import threading
 from msr import MSRX6
 
 class SwipeThread:
-  def __init__(self, tracks=None, db=None, errortext=None, tracktext=None):
-    super().__init__()
-    self.sigcancel = threading.Event()
-    self.thread = threading.Thread(target=self.idle,
-                                    args=(self.sigcancel,
-                                          tracks,
-                                          db,
-                                          errortext,
-                                          tracktext))
+
+  thread = None
+  sigcancel = threading.Event()
+
+  def __init__(self):
+    pass
 
   ''' setmsg
       Helper function to set the text of a tkinter textvariable
@@ -85,8 +82,23 @@ class SwipeThread:
       if self.swipe(tracks, db, errortext, tracktext):
         break
 
-  def start(self):
-    self.thread.start()
+  def start(self, tracks=None, db=None, errortext=None, tracktext=None):
+    if SwipeThread.thread is not None:
+      self.stop()
+      self.join()
+    SwipeThread.sigcancel.clear()
+    SwipeThread.thread = threading.Thread(target=self.idle,
+                                          args=(SwipeThread.sigcancel,
+                                                tracks,
+                                                db,
+                                                errortext,
+                                                tracktext))
+    SwipeThread.thread.start()
 
   def stop(self):
-    self.sigcancel.set()
+    SwipeThread.sigcancel.set()
+
+  def join(self):
+    if SwipeThread.thread is not None:
+      SwipeThread.thread.join()
+      SwipeThread.thread = None
